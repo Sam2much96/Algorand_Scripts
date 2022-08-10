@@ -1,0 +1,69 @@
+#to activate python virtual environment
+source activate 
+
+
+# teal supports only 2 data types (1) Byteslices (2) unsigned 64 bit integers
+
+
+#reference variable
+$ONE
+
+# enter Sandbox environment
+./sandbox enter algod
+
+#deploy smart contract # use $ONE inplace of account address
+goal app create --creator L5ESENBL23J2GJGM64Y767IXWGBCKXMGS2OGZ3MC5BBGWJAKJJAUK7BJK4 --approval-prog /data/pyteal-course/build/approval.teal --clear-prog /data/pyteal-course/build/clear.teal --global-byteslices 1 --global-ints 1 --local-byteslices 0 --local-ints 0
+
+source activate #to activate virtual  environment
+
+#build smart contract
+./build.sh contracts.counter.step_0a
+
+# check smart contract deployed details # change app id
+goal app read --global --app-id 1 --guess-format
+
+#send trasaction from Account one to Increase global counter calling increment method
+goal app call --app-id 2 --from $ONE --app-arg "str:inc"
+
+
+#send trasaction from Account one to Increase global counter calling decrement method
+goal app call --app-id 2 --from $ONE --app-arg "str:dec"
+
+
+#Debug transaction
+goal app call --app-id 2 --from $ONE --app-arg "str:inc" --dryrun-dump -o tx.dr
+
+#debug to chrome debugger
+tealdbg debug -d tx.dr --listen 0.0.0.0
+
+# deploy command 2
+goal app create \
+    --creator $ONE
+    --approval-prog /data/pyteal-course/build/approval.teal\
+    --clear-prog /data/pyteal-course/build/clear.teal\
+    --global-ints 1\
+    --local-byteslices 0\
+    --local-ints 0
+
+# opt in to smart contract
+
+goal app optin --from $ONE --app-id 13
+
+#read local storage
+
+goal app read --local --from $ONE --app-id 13 
+
+# check account mnemonic
+
+./sandbox goal account export -a $ONE #(where ONE= account)
+
+#check account balance
+./sandbox goal account balance -a {account}
+
+#check asset info
+./sandbox goal asset info --{Asset Id: assetid 48} -w YBGKX36PRRWQEPPLMWOAAX4M7HILOAX4WJW52HS2TF6ATSBUOGLQTJMKU4
+
+
+# send transactions
+
+ ./sandbox goal clerk send -f FHVO53QM54RDNTEMEVOZM5LXSTOAYQDN4UI5GCNPM236AXFW7AQAD35SQQ -t KV72DRDRENU6BIS7ZCPA4YW6JAOIZ46KRRQSU6RJY7JUVA3Z4FD45Z2QMM -a 5000
