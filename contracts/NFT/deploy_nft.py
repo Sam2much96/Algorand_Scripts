@@ -12,8 +12,8 @@ from algosdk.future.transaction import AssetConfigTxn, wait_for_confirmation
 
 
 
-__account: str="2NFCY7HBAFJ5YP7TXUOFHHMGAZ7AHEXPS5F3NENXSC3WXRVATBR4Y23AUM"
-__mnemonic : str ="rigid steak better media circle nothing range tray firm fatigue pool damage welcome supply police spoon soul topic grant offer chimney total bronze able human"
+__account: str="4KMRCP23JP4SM2L65WBLK6A3TPT723ILD27R7W755P7GAU5VCE7LJHAUEQ"
+__mnemonic : str ="tank game arrive train bring taxi tackle popular bacon gasp tell pigeon error step leaf zone suit chest next swim luggage oblige opinion about execute"
 #mnemonic : str ="rigid" #8 bytes per word
 
 
@@ -21,9 +21,17 @@ __mnemonic : str ="rigid steak better media circle nothing range tray firm fatig
 
 # creates an nft transaction
 def create_nft_transacton(_mnemonic, _address):
-    algod_address = "http://localhost:4001"
-    algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    #local host
+    #algod_address = "http://localhost:4001"
+    #algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    #algod_client = algod.AlgodClient(algod_token, algod_address)
+
+    # test-net
+    algod_address = "https://node.testnet.algoexplorerapi.io"
+    algod_token = ""
     algod_client = algod.AlgodClient(algod_token, algod_address)
+
+
 
     params = algod_client.suggested_params()
 
@@ -37,13 +45,13 @@ def create_nft_transacton(_mnemonic, _address):
                         sp=params,
                         total=1,           # NFTs have totalIssuance of exactly 1
                         default_frozen=False,
-                        unit_name="NFT_001",
-                        asset_name="Nft_testing 001",
+                        unit_name="PUNK_001",
+                        asset_name="Crypto Punk 001",
                         manager=None,
                         reserve=None,
                         freeze=False,
                         clawback="",
-                        url="https://192.168.0.104/body.json",
+                        url="ipfs://QmXYApu5uDsfQHMx149LWJy3x5XRssUeiPzvqPJyLV2ABx", #NFT Metadata or asset url
                         metadata_hash=None,
                         decimals=0,
                         strict_empty_address_check=False)        # NFTs have decimals of exactly 0
