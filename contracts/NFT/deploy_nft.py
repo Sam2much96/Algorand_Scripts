@@ -7,30 +7,50 @@ from algosdk.v2client import algod
 from algosdk.future.transaction import AssetConfigTxn, wait_for_confirmation
 
  
+import algosdk.algod as algod2
 
 
 
 
 
-__account: str="4KMRCP23JP4SM2L65WBLK6A3TPT723ILD27R7W755P7GAU5VCE7LJHAUEQ"
-__mnemonic : str ="tank game arrive train bring taxi tackle popular bacon gasp tell pigeon error step leaf zone suit chest next swim luggage oblige opinion about execute"
+__account: str=""
+__mnemonic : str =""
 #mnemonic : str ="rigid" #8 bytes per word
 
 
+"Creates an Algod Node Object"
+def create_algod_testnet_client():
+    # test-net
+    #algod_address = 'https://testnet-algorand.api.purestake.io/ps2'#"https://node.testnet.algoexplorerapi.io" #"
+
+    
+
+
+    algod_address = "https://node.testnet.algoexplorerapi.io" #"
+
+    algod_token = ""
+    
+    headers={'User-Agent': 'DoYouLoveMe?'} #work Around https://github.com/algorand/py-algorand-sdk/issues/169
+
+    algod_client = algod.AlgodClient(algod_token, algod_address, headers)
+    
+
+    return algod_client
+
+
+def create_algod_sandbox():
+    #local host
+    algod_address = "http://localhost:4001"
+    algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    algod_client = algod.AlgodClient(algod_token, algod_address)
 
 
 # creates an nft transaction
 def create_nft_transacton(_mnemonic, _address):
-    #local host
-    #algod_address = "http://localhost:4001"
-    #algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-    #algod_client = algod.AlgodClient(algod_token, algod_address)
+    
 
-    # test-net
-    algod_address = "https://node.testnet.algoexplorerapi.io"
-    algod_token = ""
-    algod_client = algod.AlgodClient(algod_token, algod_address)
 
+    algod_client=create_algod_testnet_client()
 
 
     params = algod_client.suggested_params()
@@ -45,13 +65,13 @@ def create_nft_transacton(_mnemonic, _address):
                         sp=params,
                         total=1,           # NFTs have totalIssuance of exactly 1
                         default_frozen=False,
-                        unit_name="PUNK_001",
-                        asset_name="Crypto Punk 001",
+                        unit_name="WAIF_001",
+                        asset_name="Algo Waifu 001",
                         manager=None,
                         reserve=None,
                         freeze=False,
                         clawback="",
-                        url="ipfs://QmXYApu5uDsfQHMx149LWJy3x5XRssUeiPzvqPJyLV2ABx", #NFT Metadata or asset url
+                        url="ipfs://QmNoThogc1D7XCzQrjePPxChyGmuohX6LXqDTCLJwTUUfR", #NFT Metadata or asset url
                         metadata_hash=None,
                         decimals=0,
                         strict_empty_address_check=False)        # NFTs have decimals of exactly 0
@@ -93,6 +113,22 @@ def create_nft_transacton(_mnemonic, _address):
             print("Asset ID: {}".format(scrutinized_asset['asset-id']))
             print(json.dumps(scrutinized_asset, indent=4))
             break
+
+
+
+
+
+# Debugger
+def debugAPI():
+    algod_client=create_algod_testnet_client()
+
+    algod_client.headers={'User-Agent': 'DoYouLoveMe?'}
+
+    print(algod_client.__dict__)
+
+    print(algod_client.suggested_params()) #code breaks here if not working
+
+   
 
 
 
