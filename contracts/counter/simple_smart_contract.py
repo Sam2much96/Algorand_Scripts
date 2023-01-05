@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #SImple smart contract
 
 # deploys a Teal smart contract to test wallet address
@@ -32,6 +33,15 @@ clear_state_program_precompiled = open('./build/clear.teal')
 algod_address = "https://node.testnet.algoexplorerapi.io"
 algod_token = ""
 
+
+# convert 64 bit integer i to byte string
+def intToBytes(i):
+    return i.to_bytes(8, "big")
+
+# helper function that converts a mnemonic passphrase into a private signing key
+def get_private_key_from_mnemonic(mn):
+    private_key = mnemonic.to_private_key(mn)
+    return private_key
 
 
 # helper function to compile program source
@@ -69,6 +79,178 @@ def read_global_state(client, app_id):
     app = client.application_info(app_id)
     global_state = app['params']['global-state'] if "global-state" in app['params'] else []
     return format_state(global_state)
+
+
+# helper function that waits for a given txid to be confirmed by the network
+def wait_for_confirmation(client, txid):
+    last_round = client.status().get("last-round")
+    txinfo = client.pending_transaction_info(txid)
+    while not (txinfo.get("confirmed-round") and txinfo.get("confirmed-round") > 0):
+        print("Waiting for confirmation...")
+        last_round += 1
+        client.status_after_block(last_round)
+        txinfo = client.pending_transaction_info(txid)
+    print(
+        "Transaction {} confirmed in round {}.".format(
+            txid, txinfo.get("confirmed-round")
+        )
+    )
+
+# call application
+def call_app(client, private_key, index, app_args):
+    # declare sender
+    sender = account.address_from_private_key(private_key)
+    print("Call from account:", sender)
+
+    # get node suggested parameters
+    params = client.suggested_params()
+    # comment out the next two (2) lines to use suggested fees
+    
+    #params.flat_fee = True
+    #params.fee = 1000
+
+    #app_args.encode('utf-8')
+    # create unsigned transaction
+    txn = transaction.ApplicationNoOpTxn(sender, params, index, app_args)
+
+
+    print("App call txn: ", txn)
+
+
+    # sign transaction
+    signed_txn = txn.sign(private_key)
+    tx_id = signed_txn.transaction.get_txid()
+
+    # send transaction
+    client.send_transactions([signed_txn])
+
+    # await confirmation
+    wait_for_confirmation(client, tx_id)
+
+
+
+
+
+
+# opt-in to application
+def opt_in_app(client, private_key, index):
+    # declare sender
+    sender = account.address_from_private_key(private_key)
+    print("OptIn from account: ", sender)
+
+    # get node suggested parameters
+    params = client.suggested_params()
+    # comment out the next two (2) lines to use suggested fees
+    #params.flat_fee = True
+    #params.fee = 1000
+
+    # create unsigned transaction
+    txn = transaction.ApplicationOptInTxn(sender, params, index)
+
+    # sign transaction
+    signed_txn = txn.sign(private_key)
+    tx_id = signed_txn.transaction.get_txid()
+
+    # send transaction
+    client.send_transactions([signed_txn])
+
+    # await confirmation
+    wait_for_confirmation(client, tx_id)
+
+    # display results
+    transaction_response = client.pending_transaction_info(tx_id)
+    print("OptIn to app-id:", transaction_response["txn"]["txn"]["apid"])
+
+
+
+
+
+# delete application
+def delete_app(client, private_key, index):
+    # declare sender
+    sender = account.address_from_private_key(private_key)
+
+    # get node suggested parameters
+    params = client.suggested_params()
+    # comment out the next two (2) lines to use suggested fees
+    #params.flat_fee = True
+    #params.fee = 1000
+
+    # create unsigned transaction
+    txn = transaction.ApplicationDeleteTxn(sender, params, index)
+
+    # sign transaction
+    signed_txn = txn.sign(private_key)
+    tx_id = signed_txn.transaction.get_txid()
+
+    # send transaction
+    client.send_transactions([signed_txn])
+
+    # await confirmation
+    wait_for_confirmation(client, tx_id)
+
+    # display results
+    transaction_response = client.pending_transaction_info(tx_id)
+    print("Deleted app-id:", transaction_response["txn"]["txn"]["apid"])
+
+
+# close out from application
+def close_out_app(client, private_key, index):
+    # declare sender
+    sender = account.address_from_private_key(private_key)
+
+    # get node suggested parameters
+    params = client.suggested_params()
+    # comment out the next two (2) lines to use suggested fees
+    #params.flat_fee = True
+    #params.fee = 1000
+
+    # create unsigned transaction
+    txn = transaction.ApplicationCloseOutTxn(sender, params, index)
+
+    # sign transaction
+    signed_txn = txn.sign(private_key)
+    tx_id = signed_txn.transaction.get_txid()
+
+    # send transaction
+    client.send_transactions([signed_txn])
+
+    # await confirmation
+    wait_for_confirmation(client, tx_id)
+
+    # display results
+    transaction_response = client.pending_transaction_info(tx_id)
+    print("Closed out from app-id: ", transaction_response["txn"]["txn"]["apid"])
+
+
+# clear application
+def clear_app(client, private_key, index):
+    # declare sender
+    sender = account.address_from_private_key(private_key)
+
+    # get node suggested parameters
+    params = client.suggested_params()
+    # comment out the next two (2) lines to use suggested fees
+    #params.flat_fee = True
+    #params.fee = 1000
+
+    # create unsigned transaction
+    txn = transaction.ApplicationClearStateTxn(sender, params, index)
+
+    # sign transaction
+    signed_txn = txn.sign(private_key)
+    tx_id = signed_txn.transaction.get_txid()
+
+    # send transaction
+    client.send_transactions([signed_txn])
+
+    # await confirmation
+    wait_for_confirmation(client, tx_id)
+
+    # display results
+    transaction_response = client.pending_transaction_info(tx_id)
+    print("Cleared app-id:", transaction_response["txn"]["txn"]["apid"])
+
 
 
 
@@ -128,6 +310,7 @@ def main() :
     creator_private_key =mnemonic.to_private_key(__mnemonic)
     
     # Complex TEAL program. From global counter dapp teal
+    #debug to make valid app calls to smartcontract
     data = """
     #pragma version 5
 	txn ApplicationID
@@ -223,17 +406,7 @@ def main() :
 
     # compile Teal program to TEAL assembly
 
-    #approval_compiled = algod_client.compile(approval_program_precompiled)
-    #clear_compiled = algod_client.compile(clear_state_program_precompiled)
 
-    #with open("./approval.teal", "w") as f:
-    #    f.write(approval_program)
-
-
-
-    # compile program to TEAL assembly
-    #with open("./clear.teal", "w") as f:
-    #    f.write(clear_state_program)
 
     # compile program to binary
     approval_program_compiled = compile_program(algod_client, data2)
@@ -241,14 +414,35 @@ def main() :
     # compile program to binary
     clear_state_program_compiled = compile_program(algod_client, data)
 
+    
+    print("approval program compiled:",approval_program_compiled)
+
+
     print("--------------------------------------------")
     print("Testing Deploying Counter application......")
 
+    
+
+
     # create new application
-    app_id = create_app(algod_client, creator_private_key, clear_state_program_compiled, clear_state_program_compiled, global_schema, local_schema)
+    #app_id = create_app(algod_client, creator_private_key, clear_state_program_compiled, clear_state_program_compiled, global_schema, local_schema) #works
+
+   
+   #delete application
+   #app_id = delete_app(algod_client, creator_private_key,116639568)
+
+
+
+   #call app
+   #[105, 110, 99]
+   #print ('inc'.encode())
+
+
+    app_id=call_app(algod_client, creator_private_key, 116639568, ['inc'.encode()]) #works
+
 
     # read global state of application
-    print("Global state:", read_global_state(algod_client, app_id))
+    #print("Global state:", read_global_state(algod_client, app_id))
 
 
 
