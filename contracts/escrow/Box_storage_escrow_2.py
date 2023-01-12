@@ -44,63 +44,55 @@ class BoxEscrow(Application):
     #scratch_nonce = ScratchVar(TealType.uint64) #uses nonce https://www.investopedia.com/terms/n/nonce.asp
 
 
-    @create(authorize=Authorize.only(Global.creator_address()))
+    #@create(authorize=Authorize.only(Global.creator_address()))
+    @external
     def create(self, secret):
-        self.hashed_secret = Bytes("base64", secret) # The first argument should be the hashed secret
-        self.initialize_application_state()
+        return Seq(
+
+        #self.hashed_secret.set(secret), # The first argument should be the hashed secret
+        
+
+
+        self.initialize_application_state(),
 
         #write to box using opcode
         # 100 byte box created with box_create
-        App.box_create("scratch_box_withd_amt",Int(100))
+        #App.box_create("scratch_box_withd_amt",Bytes("1234"))
 
-        
+        )
 
     @opt_in
     def opt_in(self):
         return Approve()
 
-    @no_op
+
+
+    @external
     def withdraw(self):
 
-        return Seq(
-                [
+        return Seq([
                     # If App call has more than 1 Argument
-                    If (Txn.application_args.length() > Int(1)), {
-                
-                    #store the Txn variables to scratch variables
-                    self.scratch_box_secrets[Txn.sender(),Txn.application_args[1] ], #stores secrets
-                    self.scratch_box_withd_amt[Txn.sender(),Txn.application_args[2] ], #stores withdrawal amt
-                    #self.scratch_secret.store(Txn.application_args[1]), # the 2nd app arg
-                    #self.scratch_withdrawal_amount.store(Btoi(Txn.application_args[2])), # the 3rd app arg
-
-                        
-                    },
-
-                    #load from box
-                    #box_str := App.box_get(Bytes(str(Txn.sender())),
-
-                    #asset that it isn't null
-                    #Assert( box_str.hasValue()),
-
-                        # Compare secrets
-                    Assert((self.compare_secret(Txn.application_args[1]))) ,
-
-                        #make sure the smartcontract has funds to payout
-                    And(Assert(get_balance(Global.creator_address()) >= self.scratch_box_withd_amt.box_get(Txn.sender()))),
-                    Then(
+                    If (Txn.application_args.length() > Int(1))
+                      .Then(Seq([
+                            # Compare the secret with the transaction argument
+                            Assert(self.compare_secret(Txn.application_args[1])),
+                            # Make sure the smartcontract has funds to payout
+                            Assert(self.get_balance() >= Btoi(Txn.application_args[2])), 
+                            
+                            # Store the Txn variables to Box Storage
+                            #self.scratch_box_secrets[Txn.sender(),Txn.application_args[1]], 
+                            #self.scratch_box_withd_amt[Txn.sender(), Btoi(Txn.application_args[2])], 
+                            
                             # Pay out the withdrawal amount to the sender
-                            payout(Txn.sender(), self.scratch_box_withd_amt.get(Txn.sender())),
-                       
-                            #save Txn Details to Box Ledger
-                            #self.ledger[Txn.sender()].set(Itob(scratch_box_withd_amt.get(Txn.sender()))),
+                            self.payout(Txn.sender(), Btoi(Txn.application_args[2])),
+                            
+                            # Save Txn Details to Box Ledger
+                            #self.ledger[Txn.sender()].set(Itob(self.scratch_box_withd_amt.get(Txn.sender()))),
                             Approve()
-                        ),
-                    Else (
-                            Reject()
-
-                        )
-                ]
+                        ]))
+                    ]
                 )
+
 
     @Subroutine(TealType.uint64)
     def compare_secret(scratch_secret ) -> Expr:
@@ -123,7 +115,7 @@ class BoxEscrow(Application):
 
     #should only withdraw if the Address has some Algos
     @Subroutine(TealType.uint64)
-    def get_balance(self) -> Expr: 
+    def get_balance() -> Expr: 
         balanceint : uint64=  App.balance(Global.creator_address())
         return balanceint
 
@@ -131,7 +123,7 @@ class BoxEscrow(Application):
 
     #construct a payment txn
     #https://developer.algorand.org/docs/get-details/dapps/smart-contracts/apps/
-    @Subroutine(TealType.anytype)
+    @Subroutine(TealType.none)
     def payout(scratch_sender, scratch_withdrawal_amount):
         return Seq(
         InnerTxnBuilder.Begin(),
