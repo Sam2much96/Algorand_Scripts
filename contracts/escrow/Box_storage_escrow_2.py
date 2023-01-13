@@ -13,8 +13,8 @@ from typing import Final
 
 #from beaker.lib.storage import Mapping
 
-#beker documentation
-#https://algorand-devrel.github.io/beaker/html/application_client.html
+
+#beaker documentation : https://algorand-devrel.github.io/beaker/html/application_client.html
 
 
 from algosdk.v2client import algod
@@ -25,6 +25,10 @@ from beaker.consts import Algos
 
 from beaker.lib.storage import Mapping
 
+import json
+from simple_smart_contract import create_app, compile_program
+from algosdk.future import transaction
+
 # Create a class, subclassing Application from beaker
 class BoxEscrow(Application):
 
@@ -34,114 +38,168 @@ class BoxEscrow(Application):
     )
     
     #store transaction details to  boxes
-    ledger = Mapping(abi.Address, abi.Uint64)
-    scratch_box_withd_amt = Mapping(abi.Address, abi.Uint64)
-    scratch_box_secrets = Mapping(abi.Address, abi.Byte)
-
-    #scratch_sender = ScratchVar(TealType.bytes)
-    #scratch_secret = ScratchVar(TealType.bytes)
-    #scratch_withdrawal_amount = ScratchVar(TealType.uint64)
-    #scratch_nonce = ScratchVar(TealType.uint64) #uses nonce https://www.investopedia.com/terms/n/nonce.asp
-
-
-    #@create(authorize=Authorize.only(Global.creator_address()))
-    @external
-    def create(self, secret):
-        return Seq(
-
-        #self.hashed_secret.set(secret), # The first argument should be the hashed secret
-        
-
-
-        self.initialize_application_state(),
-
-        #write to box using opcode
-        # 100 byte box created with box_create
-        #App.box_create("scratch_box_withd_amt",Bytes("1234"))
-
-        )
-
-    @opt_in
-    def opt_in(self):
-        return Approve()
-
-
-
-    @external
-    def withdraw(self):
-
-        return Seq([
-                    # If App call has more than 1 Argument
-                    If (Txn.application_args.length() > Int(1))
-                      .Then(Seq([
-                            # Compare the secret with the transaction argument
-                            Assert(self.compare_secret(Txn.application_args[1])),
-                            # Make sure the smartcontract has funds to payout
-                            Assert(self.get_balance() >= Btoi(Txn.application_args[2])), 
-                            
-                            # Store the Txn variables to Box Storage
-                            #self.scratch_box_secrets[Txn.sender(),Txn.application_args[1]], 
-                            #self.scratch_box_withd_amt[Txn.sender(), Btoi(Txn.application_args[2])], 
-                            
-                            # Pay out the withdrawal amount to the sender
-                            self.payout(Txn.sender(), Btoi(Txn.application_args[2])),
-                            
-                            # Save Txn Details to Box Ledger
-                            #self.ledger[Txn.sender()].set(Itob(self.scratch_box_withd_amt.get(Txn.sender()))),
-                            Approve()
-                        ]))
-                    ]
-                )
-
-
-    @Subroutine(TealType.uint64)
-    def compare_secret(scratch_secret ) -> Expr:
-        return Seq(Approve() if self.hashed_secret == scratch_secret else Reject())
-
-
-        #Store to receivers address to a Box
-
-    #deletes the app
-    @delete(authorize=Authorize.only(Global.creator_address()))
-    def delete():
-        return Approve()
-        
     
-    #https://pyteal.readthedocs.io/en/stable/api.html?highlight=delete%20application#pyteal.BareCallActions.delete_application
-    #Updates the app  
-    @update(authorize=Authorize.only(Global.creator_address()))
-    def update():
-        return Approve()
+    #ledger = Mapping(abi.Address, abi.Uint64)
+    #uses nonce https://www.investopedia.com/terms/n/nonce.asp
 
-    #should only withdraw if the Address has some Algos
-    @Subroutine(TealType.uint64)
-    def get_balance() -> Expr: 
-        balanceint : uint64=  App.balance(Global.creator_address())
-        return balanceint
-
-
-
-    #construct a payment txn
-    #https://developer.algorand.org/docs/get-details/dapps/smart-contracts/apps/
     @Subroutine(TealType.none)
-    def payout(scratch_sender, scratch_withdrawal_amount):
+    def assert_sender_is_creator() -> Expr:
+        return Assert(Txn.sender() == Global.creator_address())
+
+
+
+    # move any balance that the user has into the "lost" amount when they close out or clear state
+    transfer_balance_to_lost = App.globalPut(
+        Bytes("lost"),
+        App.globalGet(Bytes("lost")) + App.localGet(Txn.sender(), Bytes("balance")),
+    )
+
+
+    my_router = Router(
+    name="AlgoBank",
+    bare_calls=BareCallActions(
+        # approve a creation no-op call
+        no_op=OnCompleteAction(action=Approve(), call_config=CallConfig.CREATE),
+        # approve opt-in calls during normal usage, and during creation as a convenience for the creator
+        opt_in=OnCompleteAction(action=Approve(), call_config=CallConfig.ALL),
+        # move any balance that the user has into the "lost" amount when they close out or clear state
+        close_out=OnCompleteAction(
+            action=transfer_balance_to_lost, call_config=CallConfig.CALL
+        ),
+        clear_state=OnCompleteAction(
+            action=transfer_balance_to_lost, call_config=CallConfig.CALL
+        ),
+        # only the creator can update or delete the app
+        update_application=OnCompleteAction(
+            action=assert_sender_is_creator, call_config=CallConfig.CALL
+        ),
+        delete_application=OnCompleteAction(
+            action=assert_sender_is_creator, call_config=CallConfig.CALL
+            ),
+        ),
+    )
+
+    @my_router.method(no_op=CallConfig.CALL, opt_in=CallConfig.CALL)
+    def deposit(payment: abi.PaymentTransaction, sender: abi.Account) -> Expr:
+        """This method receives a payment from an account opted into this app and records it as a deposit.
+
+        The caller may opt into this app during this call.
+
+        Args:
+            payment: A payment transaction containing the amount of Algos the user wishes to deposit.
+                The receiver of this transaction must be this app's escrow account.
+            sender: An account that is opted into this app (or will opt in during this method call).
+                The deposited funds will be recorded in this account's local state. This account must
+                be the same as the sender of the `payment` transaction.
+        """
         return Seq(
-        InnerTxnBuilder.Begin(),
-        InnerTxnBuilder.SetFields({
-            TxnField.type_enum: TxnType.Payment,
-            TxnField.amount: Algos(scratch_withdrawal_amount.load()), 
-            TxnField.receiver: scratch_sender.load() 
-            }),
-        InnerTxnBuilder.Submit(),
+            Assert(payment.get().sender() == sender.address()),
+            Assert(payment.get().receiver() == Global.current_application_address()),
+
+
+
+
+            App.localPut(
+                sender.address(),
+                Bytes("balance"),
+                App.localGet(sender.address(), Bytes("balance")) + payment.get().amount(),
+            ),
         )
 
+
+
+    @my_router.method
+    def getBalance(user: abi.Account, *, output: abi.Uint64) -> Expr:
+        """Lookup the balance of a user held by this app.
+
+        Args:
+            user: The user whose balance you wish to look up. This user must be opted into this app.
+
+        Returns:
+            The balance corresponding to the given user, in microAlgos.
+        """
+
+
+        return output.set(App.localGet(user.address(), Bytes("balance")))
+
+
+    @my_router.method
+    def withdraw(amount: abi.Uint64, recipient: abi.Account) -> Expr:
+        """Withdraw an amount of Algos held by this app.
+
+        The sender of this method call will be the source of the Algos, and the destination will be
+        the `recipient` argument.
+
+        The Algos will be transferred to the recipient using an inner transaction whose fee is set
+        to 0, meaning the caller's transaction must include a surplus fee to cover the inner
+        transaction.
+
+        Args:
+            amount: The amount of Algos requested to be withdraw, in microAlgos. This method will fail
+                if this amount exceeds the amount of Algos held by this app for the method call sender.
+            recipient: An account who will receive the withdrawn Algos. This may or may not be the same
+                as the method call sender.
+        """
+        return Seq(
+            # if amount is larger than App.localGet(Txn.sender(), Bytes("balance")), the subtraction
+            # will underflow and fail this method call
+            App.localPut(
+                Txn.sender(),
+                Bytes("balance"),
+                App.localGet(Txn.sender(), Bytes("balance")) - amount.get(),
+            ),
+            InnerTxnBuilder.Begin(),
+            InnerTxnBuilder.SetFields(
+                {
+                    TxnField.type_enum: TxnType.Payment,
+                    TxnField.receiver: recipient.address(),
+                    TxnField.amount: amount.get(),
+                    TxnField.fee: Int(0),
+                }
+            ),
+            InnerTxnBuilder.Submit(),
+        )
+
+     
+    
+
+    approval_program, clear_state_program, contract = my_router.compile_program(
+        version=8, optimize=OptimizeOptions(scratch_slots=True)
+    )
+
+
+
+
+
+
+
+    #testing secrets conversion
+    #print (sha256b64("password"))
+    with open("algobank_approval.teal", "w") as f:
+        f.write(approval_program)
+
+    with open("algobank_clear_state.teal", "w") as f:
+        f.write(clear_state_program)
+   #     
+    with open("algobank.json", "w") as f:
+        f.write(json.dumps(contract.dictify(), indent=4))
+
+
+
+
+
+
+
+
+
+    
 
 
 def sha256b64(s: str) -> str:
     return base64.b64encode(hashlib.sha256(str(s).encode("utf-8")).digest()).decode("utf-8")
 
 #running tests on sandbox env
-def demo():
+def deploy():
     
     # test-net
     algod_address = "https://node.testnet.algoexplorerapi.io"
@@ -150,7 +208,7 @@ def demo():
 
 
 
-    params = algod_client.suggested_params()
+    _params = algod_client.suggested_params()
 
     __mnemonic : str = "tank game arrive train bring taxi tackle popular bacon gasp tell pigeon error step leaf zone suit chest next swim luggage oblige opinion about execute"
 
@@ -163,9 +221,17 @@ def demo():
 
     accts = {}
     accts[1] = {}
-    accts[1]['pk'] = mnemonic.to_public_key(__mnemonic_2) #saves the new account's address
+    accts[1]['pk'] = mnemonic.to_public_key(__mnemonic) #saves the new account's address
     accts[1]['sk'] = mnemonic.to_private_key(__mnemonic) #saves the new account's mnemonic
+    
+    mnemonic_obj_1 = mnemonic.to_private_key(__mnemonic)
+    mnemonic_obj_2 = mnemonic.to_public_key(__mnemonic)
+    
     #acct = accts.pop()
+
+    print('Algod Client Status: ',algod_client.status())
+
+    print (accts[1])
 
     #other accounts
     accts[2] = {}
@@ -173,20 +239,308 @@ def demo():
     accts[2]['sk'] = mnemonic.to_private_key(__mnemonic_2)
 
     # Create an Application client containing both an algod client and my app
-    app_client = ApplicationClient(client=algod_client, app=BoxEscrow(), signer=accounts[1]['pk'], params=params)
+    
+    app_client = algod.AlgodClient(algod_token, algod_address,headers={'User-Agent': 'DoYouLoveMe?'})
 
-    secret = sha256b64("password") #XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg=
+
+    print('Algod Client Status: ',algod_client.status())
+
+    #app_client = ApplicationClient(client=algod_client, app=BoxEscrow(),sender=accts[1]['pk'] ,signer=accts[1]['sk'])
+
+    #secret = sha256b64("password") #XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg=
+
+    # declare application state storage (immutable)
+    local_ints = 0
+    local_bytes = 0
+    global_ints = 1
+    global_bytes = 1
+    global_schema = transaction.StateSchema(global_ints, global_bytes)
+    local_schema = transaction.StateSchema(local_ints, local_bytes)
+
+
+    #Modernize this code to Read from the compiled Teal Source
+
+    approval_program = """
+    #pragma version 8
+txn NumAppArgs
+int 0
+==
+bnz main_l8
+txna ApplicationArgs 0
+method "deposit(pay,account)void"
+==
+bnz main_l7
+txna ApplicationArgs 0
+method "getBalance(account)uint64"
+==
+bnz main_l6
+txna ApplicationArgs 0
+method "withdraw(uint64,account)void"
+==
+bnz main_l5
+err
+main_l5:
+txn OnCompletion
+int NoOp
+==
+txn ApplicationID
+int 0
+!=
+&&
+assert
+txna ApplicationArgs 1
+btoi
+store 3
+txna ApplicationArgs 2
+int 0
+getbyte
+store 4
+load 3
+load 4
+callsub withdraw_3
+int 1
+return
+main_l6:
+txn OnCompletion
+int NoOp
+==
+txn ApplicationID
+int 0
+!=
+&&
+assert
+txna ApplicationArgs 1
+int 0
+getbyte
+callsub getBalance_2
+store 2
+byte 0x151f7c75
+load 2
+itob
+concat
+log
+int 1
+return
+main_l7:
+txn OnCompletion
+int NoOp
+==
+txn ApplicationID
+int 0
+!=
+&&
+txn OnCompletion
+int OptIn
+==
+txn ApplicationID
+int 0
+!=
+&&
+||
+assert
+txna ApplicationArgs 1
+int 0
+getbyte
+store 1
+txn GroupIndex
+int 1
+-
+store 0
+load 0
+gtxns TypeEnum
+int pay
+==
+assert
+load 0
+load 1
+callsub deposit_1
+int 1
+return
+main_l8:
+txn OnCompletion
+int NoOp
+==
+bnz main_l18
+txn OnCompletion
+int OptIn
+==
+bnz main_l17
+txn OnCompletion
+int CloseOut
+==
+bnz main_l16
+txn OnCompletion
+int UpdateApplication
+==
+bnz main_l15
+txn OnCompletion
+int DeleteApplication
+==
+bnz main_l14
+err
+main_l14:
+txn ApplicationID
+int 0
+!=
+assert
+callsub assertsenderiscreator_0
+int 1
+return
+main_l15:
+txn ApplicationID
+int 0
+!=
+assert
+callsub assertsenderiscreator_0
+int 1
+return
+main_l16:
+txn ApplicationID
+int 0
+!=
+assert
+byte "lost"
+byte "lost"
+app_global_get
+txn Sender
+byte "balance"
+app_local_get
++
+app_global_put
+int 1
+return
+main_l17:
+int 1
+return
+main_l18:
+txn ApplicationID
+int 0
+==
+assert
+int 1
+return
+
+// assert_sender_is_creator
+assertsenderiscreator_0:
+txn Sender
+global CreatorAddress
+==
+assert
+retsub
+
+// deposit
+deposit_1:
+store 6
+store 5
+load 5
+gtxns Sender
+load 6
+txnas Accounts
+==
+assert
+load 5
+gtxns Receiver
+global CurrentApplicationAddress
+==
+assert
+load 6
+txnas Accounts
+byte "balance"
+load 6
+txnas Accounts
+byte "balance"
+app_local_get
+load 5
+gtxns Amount
++
+app_local_put
+retsub
+
+// getBalance
+getBalance_2:
+txnas Accounts
+byte "balance"
+app_local_get
+retsub
+
+// withdraw
+withdraw_3:
+store 8
+store 7
+txn Sender
+byte "balance"
+txn Sender
+byte "balance"
+app_local_get
+load 7
+-
+app_local_put
+itxn_begin
+int pay
+itxn_field TypeEnum
+load 8
+txnas Accounts
+itxn_field Receiver
+load 7
+itxn_field Amount
+int 0
+itxn_field Fee
+itxn_submit
+retsub
+    """
+    
+
+
+
+    clear_state_program = """
+#pragma version 8
+txn NumAppArgs
+int 0
+==
+bnz main_l2
+err
+main_l2:
+byte "lost"
+byte "lost"
+app_global_get
+txn Sender
+byte "balance"
+app_local_get
++
+app_global_put
+int 1
+return
+    """
+
+    
+
+
+
+    response = algod_client.compile(approval_program)
+    print ("Raw Response =",response )
+    print("Response Result = ",response['result'])
+    print("Response Hash = ",response['hash'])
+
+
+    # compile program to binary
+    approval_program_compiled = compile_program(algod_client, approval_program)
+
+    # compile program to binary
+    clear_state_program_compiled = compile_program(algod_client, clear_state_program)
+
+
+    app_id, app_addr, txid = create_app(app_client,_params ,accts[1]['sk'], approval_program_compiled, clear_state_program_compiled, global_schema, local_schema)
 
     # Create the applicatiion on chain, set the app id for the app client & store app secret
-    app_id, app_addr, txid = app_client.create(args=secret)
+    #app_id, app_addr, txid = #app_client.create(sender=mnemonic_obj_2, signer=mnemonic_obj_2)
     
     print(f"Created App with id: {app_id} and address addr: {app_addr} in tx: {txid}")
 
     #app_client.call(BoxEscrow.withdraw)
     
-    result = app_client.call(BoxEscrow.withdraw, secret)
+    #result = app_client.call(BoxEscrow.withdraw, 101_100, accts[2]['pk'])
     
-    print(f"Currrent counter value: {result.return_value}")
+    #print(f"Currrent counter value: {result.return_value}")
 
     
     #disabling for debugging
@@ -206,10 +560,11 @@ def demo():
 
 if __name__ == "__main__":
     
-    #runs the progam and the demo
+    #Builds the progam and deploys
     ca = BoxEscrow()
-    demo()
+    
 
+    
+    
+    #deploy()
 
-    #testing secrets conversion
-    #print (sha256b64("password"))
