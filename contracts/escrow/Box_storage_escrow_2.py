@@ -26,7 +26,7 @@ from beaker.consts import Algos
 from beaker.lib.storage import Mapping
 
 import json
-from simple_smart_contract import create_app, compile_program
+from simple_smart_contract import create_app, compile_program, call_app, delete_app, pay, call_app_method
 from algosdk.future import transaction
 
 # Create a class, subclassing Application from beaker
@@ -41,10 +41,12 @@ class BoxEscrow(Application):
     
     #ledger = Mapping(abi.Address, abi.Uint64)
     #uses nonce https://www.investopedia.com/terms/n/nonce.asp
+    scratch_storage = ScratchVar(TealType.bytes)
+    byte_storage = Bytes("owner")  # byteslice
 
-    @Subroutine(TealType.none)
+    @Subroutine(TealType.none)  #Bare app calls https://pyteal.readthedocs.io/en/stable/abi.html?highlight=registrable%20methods#registering-bare-app-calls
     def assert_sender_is_creator() -> Expr:
-        return Assert(Txn.sender() == Global.creator_address())
+        return Seq(Assert(Txn.sender() == Global.creator_address()))
 
 
 
@@ -58,7 +60,7 @@ class BoxEscrow(Application):
     my_router = Router(
     name="AlgoBank",
     bare_calls=BareCallActions(
-        # approve a creation no-op call
+        # approve a creation no-op call 
         no_op=OnCompleteAction(action=Approve(), call_config=CallConfig.CREATE),
         # approve opt-in calls during normal usage, and during creation as a convenience for the creator
         opt_in=OnCompleteAction(action=Approve(), call_config=CallConfig.ALL),
@@ -99,10 +101,10 @@ class BoxEscrow(Application):
 
 
 
-            App.localPut(
+            App.box_put(
                 sender.address(),
                 Bytes("balance"),
-                App.localGet(sender.address(), Bytes("balance")) + payment.get().amount(),
+                #App.localGet(sender.address(), Bytes("balance")) + payment.get().amount(),
             ),
         )
 
@@ -141,27 +143,26 @@ class BoxEscrow(Application):
                 as the method call sender.
         """
         return Seq(
-            # if amount is larger than App.localGet(Txn.sender(), Bytes("balance")), the subtraction
-            # will underflow and fail this method call
-            App.localPut(
-                Txn.sender(),
-                Bytes("balance"),
-                App.localGet(Txn.sender(), Bytes("balance")) - amount.get(),
-            ),
-            InnerTxnBuilder.Begin(),
-            InnerTxnBuilder.SetFields(
-                {
-                    TxnField.type_enum: TxnType.Payment,
-                    TxnField.receiver: recipient.address(),
-                    TxnField.amount: amount.get(),
-                    TxnField.fee: Int(0),
-                }
-            ),
-            InnerTxnBuilder.Submit(),
+
+            If(Txn.sender() != Global.creator_address()) #opcode error
+
+            .Then( 
+                InnerTxnBuilder.Begin(),
+                InnerTxnBuilder.SetFields(
+                    {
+                        TxnField.type_enum: TxnType.Payment,
+                        TxnField.receiver: recipient.address(),
+                        TxnField.amount: amount.get(),
+                        TxnField.fee: Int(0),
+                    }
+                ),
+                InnerTxnBuilder.Submit(),
+                )
+            .ElseIf( Txn.sender() == Global.creator_address())
+            .Then(Approve())
         )
 
-     
-    
+
 
     approval_program, clear_state_program, contract = my_router.compile_program(
         version=8, optimize=OptimizeOptions(scratch_slots=True)
@@ -199,7 +200,7 @@ def sha256b64(s: str) -> str:
     return base64.b64encode(hashlib.sha256(str(s).encode("utf-8")).digest()).decode("utf-8")
 
 #running tests on sandbox env
-def deploy():
+def create_algorand_node_and_acct():
     
     # test-net
     algod_address = "https://node.testnet.algoexplorerapi.io"
@@ -245,6 +246,22 @@ def deploy():
 
     print('Algod Client Status: ',algod_client.status())
 
+    _app_id : int = 154830235
+
+
+    #deploy(_params, accts[1]['sk'],algod_client)
+
+    #delete_app(algod_client, accts[1]['sk'], _app_id)
+
+    #pay(algod_client, accts[2]['sk'], accts[1]['pk'], 1101101)
+    
+    #SEND A NEW PARAMS FOR APP CALLS
+
+
+    call_app(algod_client, accts[2]['sk'], _app_id, "withdraw(0,RJ6STB3FL6VNNRSIMA3K5EU4DQIJJ6FAZEOIHQZA7B4GGUNLU4VSXACWYY)void") #use call_app_methode instead #set fee to 2000 Algos
+
+def deploy(_params, mnemonic_ ,algod_client):
+
     #app_client = ApplicationClient(client=algod_client, app=BoxEscrow(),sender=accts[1]['pk'] ,signer=accts[1]['sk'])
 
     #secret = sha256b64("password") #XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg=
@@ -261,7 +278,7 @@ def deploy():
     #Modernize this code to Read from the compiled Teal Source
 
     approval_program = """
-    #pragma version 8
+#pragma version 8
 txn NumAppArgs
 int 0
 ==
@@ -446,14 +463,7 @@ assert
 load 6
 txnas Accounts
 byte "balance"
-load 6
-txnas Accounts
-byte "balance"
-app_local_get
-load 5
-gtxns Amount
-+
-app_local_put
+box_put
 retsub
 
 // getBalance
@@ -468,13 +478,16 @@ withdraw_3:
 store 8
 store 7
 txn Sender
-byte "balance"
+global CreatorAddress
+!=
+bnz withdraw_3_l3
 txn Sender
-byte "balance"
-app_local_get
-load 7
--
-app_local_put
+global CreatorAddress
+==
+bz withdraw_3_l4
+int 1
+return
+withdraw_3_l3:
 itxn_begin
 int pay
 itxn_field TypeEnum
@@ -483,9 +496,10 @@ txnas Accounts
 itxn_field Receiver
 load 7
 itxn_field Amount
-int 0
+int 1000
 itxn_field Fee
 itxn_submit
+withdraw_3_l4:
 retsub
     """
     
@@ -529,7 +543,7 @@ return
     clear_state_program_compiled = compile_program(algod_client, clear_state_program)
 
 
-    app_id, app_addr, txid = create_app(app_client,_params ,accts[1]['sk'], approval_program_compiled, clear_state_program_compiled, global_schema, local_schema)
+    app_id, app_addr, txid = create_app(algod_client,_params ,mnemonic_, approval_program_compiled, clear_state_program_compiled, global_schema, local_schema)
 
     # Create the applicatiion on chain, set the app id for the app client & store app secret
     #app_id, app_addr, txid = #app_client.create(sender=mnemonic_obj_2, signer=mnemonic_obj_2)
@@ -564,7 +578,7 @@ if __name__ == "__main__":
     ca = BoxEscrow()
     
 
-    
+    create_algorand_node_and_acct()
     
     #deploy()
-
+    #
