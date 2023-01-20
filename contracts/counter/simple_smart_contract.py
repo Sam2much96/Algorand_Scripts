@@ -12,8 +12,9 @@
 from algosdk.v2client import algod
 from algosdk import account
 from algosdk import mnemonic
-#from algosdk import transaction
+
 from algosdk.future import transaction
+from algosdk.atomic_transaction_composer import *
 
 import base64
 
@@ -25,8 +26,8 @@ __account: str="4KMRCP23JP4SM2L65WBLK6A3TPT723ILD27R7W755P7GAU5VCE7LJHAUEQ"
 
 
 
-approval_program_precompiled = open('./build/approval.teal')
-clear_state_program_precompiled = open('./build/clear.teal')
+#approval_program_precompiled = open('./build/approval.teal')
+#clear_state_program_precompiled = open('./build/clear.teal')
 
 # user declared algod connection parameters.
 # Node must have EnableDeveloperAPI set to true in its config
@@ -96,6 +97,73 @@ def wait_for_confirmation(client, txid):
         )
     )
 
+def pay( client , private_key, receipent, amount):
+   # declare sender
+    sender = account.address_from_private_key(private_key)
+    print("Call from account:", sender)
+
+    # get node suggested parameters
+    params = client.suggested_params()
+    # comment out the next two (2) lines to use suggested fees
+    
+    #params.flat_fee = True
+    #params.fee = 1000
+
+    #app_args.encode('utf-8')
+    # create unsigned transaction
+    #txn = transaction.ApplicationNoOpTxn(sender, params, index, app_args)
+
+    txn = transaction.PaymentTxn(sender, params, receipent, amount)
+
+    print("App call txn: ", txn)
+
+
+    # sign transaction
+    signed_txn = txn.sign(private_key)
+    tx_id = signed_txn.transaction.get_txid()
+
+    # send transaction
+    client.send_transactions([signed_txn])
+
+    # await confirmation
+    wait_for_confirmation(client, tx_id)
+
+# call application method
+# using Atomic Transaction composer
+def call_app_method(client, private_key, index, fee, _method, arg1, arg2):
+    # get sender address
+    sender = account.address_from_private_key(private_key)
+
+    # create a Signer Object
+    signer = AccountTransactionSigner(private_key)
+
+    params = client.suggested_params()
+
+    params.flat_fee = True
+    params.fee = fee
+
+    # create an instance of AtomicTransactionComposer
+    atc = AtomicTransactionComposer()
+    atc.add_method_call(
+        app_id = index,
+        method= contract.get_method_by_name(_method),
+        sender = sender,
+        sp = params,
+        signer = signer,
+        method_args = [],
+
+        )
+
+    #send transaction
+    results = atc.execute(client, 2)
+
+    #wait for confirmation
+    print("TXID: ", results.tx_ids[0])
+    prinr("Result confirmed in round: {}".format(results.confirmed_round))
+
+
+
+
 # call application
 def call_app(client, private_key, index, app_args):
     # declare sender
@@ -106,8 +174,8 @@ def call_app(client, private_key, index, app_args):
     params = client.suggested_params()
     # comment out the next two (2) lines to use suggested fees
     
-    #params.flat_fee = True
-    #params.fee = 1000
+    params.flat_fee = True
+    params.fee = 1000
 
     #app_args.encode('utf-8')
     # create unsigned transaction
@@ -257,7 +325,7 @@ def clear_app(client, private_key, index):
 
 
 # create new application
-def create_app(client, private_key, approval_program, clear_program, global_schema, local_schema):
+def create_app(client, params, private_key, approval_program, clear_program, global_schema, local_schema):
     # define sender as creator
     sender = account.address_from_private_key(private_key)
 
@@ -265,7 +333,7 @@ def create_app(client, private_key, approval_program, clear_program, global_sche
     on_complete = transaction.OnComplete.NoOpOC.real
 
     # get node suggested parameters
-    params = client.suggested_params()
+    #params = client.suggested_params()
 
     # create unsigned transaction
     txn = transaction.ApplicationCreateTxn(sender, params, on_complete, \
@@ -448,4 +516,4 @@ def main() :
 
 
 
-main()
+#main()
