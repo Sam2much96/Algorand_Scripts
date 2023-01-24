@@ -26,8 +26,11 @@ from beaker.consts import Algos
 from beaker.lib.storage import Mapping
 
 import json
-from simple_smart_contract import create_app, compile_program, call_app, delete_app, pay, call_app_method
+from simple_smart_contract import create_app, compile_program, call_app, delete_app, pay, call_app_method, pay_construct
+
 from algosdk.future import transaction
+from algosdk.abi import Contract
+
 
 # Create a class, subclassing Application from beaker
 class BoxEscrow(Application):
@@ -225,8 +228,8 @@ def create_algorand_node_and_acct():
     accts[1]['pk'] = mnemonic.to_public_key(__mnemonic) #saves the new account's address
     accts[1]['sk'] = mnemonic.to_private_key(__mnemonic) #saves the new account's mnemonic
     
-    mnemonic_obj_1 = mnemonic.to_private_key(__mnemonic)
-    mnemonic_obj_2 = mnemonic.to_public_key(__mnemonic)
+    mnemonic_obj_a1 = mnemonic.to_private_key(__mnemonic)
+    mnemonic_obj_a2 = mnemonic.to_public_key(__mnemonic)
     
     #acct = accts.pop()
 
@@ -239,6 +242,12 @@ def create_algorand_node_and_acct():
     accts[2]['pk'] = mnemonic.to_public_key(__mnemonic_2)
     accts[2]['sk'] = mnemonic.to_private_key(__mnemonic_2)
 
+
+    mnemonic_obj_b1 = mnemonic.to_private_key(__mnemonic_2)
+    mnemonic_obj_b2 = mnemonic.to_public_key(__mnemonic_2)
+    
+
+    escrow_address = "MBUZB6RELBF6TYLWB3WT5W25GDA26FBXJZONKN54XQP2QCY2CXIFSQOBU4"
     # Create an Application client containing both an algod client and my app
     
     app_client = algod.AlgodClient(algod_token, algod_address,headers={'User-Agent': 'DoYouLoveMe?'})
@@ -246,19 +255,39 @@ def create_algorand_node_and_acct():
 
     print('Algod Client Status: ',algod_client.status())
 
-    _app_id : int = 154830235
+    _app_id : int = 155672004
 
 
     #deploy(_params, accts[1]['sk'],algod_client)
 
     #delete_app(algod_client, accts[1]['sk'], _app_id)
 
-    #pay(algod_client, accts[2]['sk'], accts[1]['pk'], 1101101)
+    #pay(algod_client, accts[1]['sk'], escrow_address, 1101101)
     
-    #SEND A NEW PARAMS FOR APP CALLS
+    
+
+    #call_app(algod_client, accts[2]['sk'], _app_id, "withdraw(0,RJ6STB3FL6VNNRSIMA3K5EU4DQIJJ6FAZEOIHQZA7B4GGUNLU4VSXACWYY)void")
+
+    
+    #txn = pay_construct(app_client, accts[1]['sk'], "MBUZB6RELBF6TYLWB3WT5W25GDA26FBXJZONKN54XQP2QCY2CXIFSQOBU4", 100_000)
+
+    #call_app_method(app_client, accts[1]['sk'],_app_id, 1000, get_method('deposit'), txn, accts[1]['pk'] )   
+
+    #works
+
+    call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("withdraw"), 10000,accts[2]['pk'] )
 
 
-    call_app(algod_client, accts[2]['sk'], _app_id, "withdraw(0,RJ6STB3FL6VNNRSIMA3K5EU4DQIJJ6FAZEOIHQZA7B4GGUNLU4VSXACWYY)void") #use call_app_methode instead #set fee to 2000 Algos
+# Utility function to get the Method object for a given method name
+def get_method(name: str) :
+    with open("algobank.json") as f:
+        js = f.read()
+    c = Contract.from_json(js)
+    for m in c.methods:
+        if m.name == name:
+            return m
+    raise Exception("No method with the name {}".format(name))
+
 
 def deploy(_params, mnemonic_ ,algod_client):
 
@@ -496,7 +525,7 @@ txnas Accounts
 itxn_field Receiver
 load 7
 itxn_field Amount
-int 1000
+int 0
 itxn_field Fee
 itxn_submit
 withdraw_3_l4:
