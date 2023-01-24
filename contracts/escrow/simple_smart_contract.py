@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 #SImple smart contract
 
-# deploys a Teal smart contract to test wallet address
-# a counting contract that increments a blockchain stored number
+"""
+Helpful Logic for Working on Algorand SmartContracts
+Configured to Testnet
 
-#contains both compile and deploy logic. SHould be separated later
+"""
 
 
 
@@ -130,6 +131,9 @@ def pay( client , private_key, receipent, amount):
 
 # call application method
 # using Atomic Transaction composer
+#use Atomic Transaction Composer to construct method call to ABI method
+#https://developer.algorand.org/docs/get-details/atc/?from_query=atomic%20tr#template-modal-overlay
+#works
 def call_app_method(client, private_key, index, fee, _method, arg1, arg2):
     # get sender address
     sender = account.address_from_private_key(private_key)
@@ -146,11 +150,11 @@ def call_app_method(client, private_key, index, fee, _method, arg1, arg2):
     atc = AtomicTransactionComposer()
     atc.add_method_call(
         app_id = index,
-        method= contract.get_method_by_name(_method),
+        method= _method, #contract.get_method_by_name(_method),
         sender = sender,
         sp = params,
         signer = signer,
-        method_args = [],
+        method_args = [arg1,arg2],
 
         )
 
@@ -159,7 +163,7 @@ def call_app_method(client, private_key, index, fee, _method, arg1, arg2):
 
     #wait for confirmation
     print("TXID: ", results.tx_ids[0])
-    prinr("Result confirmed in round: {}".format(results.confirmed_round))
+    print("Result confirmed in round: {}".format(results.confirmed_round))
 
 
 
@@ -320,7 +324,51 @@ def clear_app(client, private_key, index):
     print("Cleared app-id:", transaction_response["txn"]["txn"]["apid"])
 
 
+def call_app_with_abi(client ,app_id : int, method, sender,params, signer, arg1, arg2 , deposit_acct):
 
+    atc = AtomicTransactionComposer()
+
+
+
+    
+
+
+    # Simple call to the `add` method, method_args can be any type but _must_ 
+    # match those in the method signature of the contract
+    atc.add_method_call(app_id, method, sender, params, signer, method_args=[arg1,arg2])
+
+       # get node suggested parameters
+    #params = client.suggested_params()
+    # comment out the next two (2) lines to use suggested fees
+    
+
+
+    # This method requires a `transaction` as its second argument. Construct the transaction and pass it in as an argument.
+    # The ATC will handle adding it to the group transaction and setting the reference in the application arguments.
+    
+    #ptxn = transaction.PaymentTxn(sender, params, deposit_acct, 10000)
+    #txn = TransactionWithSigner(ptxn, signer)
+    #atc.add_method_call(app_id, 'deposit', sender, params, signer, method_args=[txn, sender])
+    
+    
+    # txngroup = atc.build_group()
+    # txids = atc.submit(client)
+ 
+
+    #sign_transactions(atc)
+
+    print ("Txn Debug: ",atc.get_status())
+
+    print ("Txn Debug: ",atc.get_tx_count())
+
+    print ("Txn Debug: ",atc.build_group())
+
+    atc.execute(client, 2)
+
+    #result = atc.execute(client, 2)
+
+    #for res in result.abi_results:
+    #    print(res.return_value)
 
 
 
@@ -380,83 +428,9 @@ def main() :
     # Complex TEAL program. From global counter dapp teal
     #debug to make valid app calls to smartcontract
     data = """
-    #pragma version 5
-	txn ApplicationID
-	int 0
-	==
-	bnz main_l16
-	txn OnCompletion
-	int DeleteApplication
-	==
-	bnz main_l15
-	txn OnCompletion
-	int UpdateApplication
-	==
-	bnz main_l14
-	txn OnCompletion
-	int OptIn
-	==
-	bnz main_l13
-	txn OnCompletion
-	int CloseOut
-	==
-	bnz main_l12
-	txn OnCompletion
-	int NoOp
-	==
-	bnz main_l7
-	err
-	main_l7:
-	txna ApplicationArgs 0
-	byte "inc"
-	==
-	bnz main_l11
-	txna ApplicationArgs 0
-	byte "dec"
-	==
-	bnz main_l10
-	err
-	main_l10:
-	byte "counter"
-	byte "counter"
-	app_global_get
-	int 1
-	-
-	app_global_put
-	int 1
-	return
-	main_l11:
-	byte "counter"
-	byte "counter"
-	app_global_get
-	int 1
-	+
-	app_global_put
-	int 1
-	return
-	main_l12:
-	int 0
-	return
-	main_l13:
-	int 0
-	return
-	main_l14:
-	int 0
-	return
-	main_l15:
-	int 0
-	return
-	main_l16:
-	byte "owner"
-	txn Sender
-	app_global_put
-	byte "counter"
-	int 0
-	app_global_put
-	int 1
-	return
+    
     """ #accepts and rejects all transactions
-    data2 = "#pragma version 5; int 1; return"
+    data2 = ""
     # compile teal program
     response = algod_client.compile(data)
     print ("Raw Response =",response )
