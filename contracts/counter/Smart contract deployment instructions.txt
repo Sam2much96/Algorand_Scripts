@@ -26,6 +26,11 @@ goal app read --global --app-id 1 --guess-format
 goal app call --app-id 2 --from $ONE --app-arg "str:inc"
 
 
+#call smartcontract ARC 04 method
+
+goal app method --arg "0" --arg "WOSFDOS3DRD7UAHBJH3LA2PTZKJMVHU2STVDUXNSCKMVRDGNZHTNIEHUJY" --method "withdraw(uint64,account)void" --fee 2000 --app-id 7 --from WOSFDOS3DRD7UAHBJH3LA2PTZKJMVHU2STVDUXNSCKMVRDGNZHTNIEHUJY
+
+
 #send trasaction from Account one to Increase global counter calling decrement method
 goal app call --app-id 2 --from $ONE --app-arg "str:dec"
 
@@ -35,6 +40,10 @@ goal app call --app-id 2 --from $ONE --app-arg "str:inc" --dryrun-dump -o tx.dr
 
 #debug to chrome debugger
 tealdbg debug -d tx.dr --listen 0.0.0.0
+
+tealdbg debug /data/pyteal-course/contracts/escrow/algobank_approval.teal -d dr.msgp --frontend web --listen 0.0.0.0
+
+
 
 # deploy command 2
 goal app create \
@@ -67,3 +76,11 @@ goal app read --local --from $ONE --app-id 13
 # send transactions
 
  ./sandbox goal clerk send -f FHVO53QM54RDNTEMEVOZM5LXSTOAYQDN4UI5GCNPM236AXFW7AQAD35SQQ -t KV72DRDRENU6BIS7ZCPA4YW6JAOIZ46KRRQSU6RJY7JUVA3Z4FD45Z2QMM -a 5000
+
+
+#delete later
+ Testing Deploying Counter application......
+TXID:  HMNGTWFPJ6RA4TD6K76WNMPXZ6BELMNQG7C5T7KT7MMU3YRS47NQ
+Result confirmed in round: 24862079
+Created new app-id: 116639568
+Global state: {'counter': 0, 'owner': '4pkRP1tL+SZpfu2CtXgbm+f9bQsevx/b/ev+YFO1ET4='}
