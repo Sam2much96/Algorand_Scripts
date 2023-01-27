@@ -98,6 +98,27 @@ def wait_for_confirmation(client, txid):
         )
     )
 
+def pay_construct( client , private_key, receipent, amount):
+   # declare sender
+    sender = account.address_from_private_key(private_key)
+    print("Call from account:", sender)
+
+    # get node suggested parameters
+    params = client.suggested_params()
+    # comment out the next two (2) lines to use suggested fees
+    
+    #params.flat_fee = True
+    #params.fee = 1000
+
+    #app_args.encode('utf-8')
+    # create unsigned transaction
+    #txn = transaction.ApplicationNoOpTxn(sender, params, index, app_args)
+
+    txn = transaction.PaymentTxn(sender, params, receipent, amount)
+
+    return txn
+
+
 def pay( client , private_key, receipent, amount):
    # declare sender
     sender = account.address_from_private_key(private_key)
@@ -157,6 +178,8 @@ def call_app_method(client, private_key, index, fee, _method, arg1, arg2):
         method_args = [arg1,arg2],
 
         )
+
+    
 
     #send transaction
     results = atc.execute(client, 2)
