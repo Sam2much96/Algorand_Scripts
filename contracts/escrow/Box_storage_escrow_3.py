@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
-
-#works
+# *************************************************
+# godot3-Dystopia-game by INhumanity_arts
+# Released under MIT License
+# *************************************************
+# Box Storage Escrow Smart Contract
+#
+# An ARC 4 Abi Smart Contract
+# THe Entire SmartContract Logic in one File.
+# 
+# Features:
+# (1) Box Storage
+# (2) Withdrawals
+# (3) Deposit
+# (4) NFT minting
 
 from pyteal import *
 from beaker import *
@@ -147,7 +159,7 @@ class BoxEscrow(Application):
         """
         return Seq(
 
-            If(Txn.sender() != Global.creator_address()) #opcode error
+            If(Txn.sender() != Global.creator_address()) 
 
             .Then( 
                 InnerTxnBuilder.Begin(),
@@ -166,6 +178,53 @@ class BoxEscrow(Application):
         )
 
 
+    # Triggers an Abi method call via smartcontracts 
+    #@my_router.method
+    #def method_call() -> Expr:
+
+    #return Seq (
+    #    InnerTxnBuilder.Begin()
+    #    InnerTxnBuilder.MethodCall(
+    #    app_id=app_id,
+    #    method_signature=method_signature,
+    #    args=args,
+    #    extra_fields=extra_fields,
+    #    ),
+    #    InnerTxnBuilder.Submit()
+    #    )
+
+
+
+    @my_router.method
+    def mint_asset(recipient : abi.Account) -> Expr:
+        """Mints an Asset Token To a Recipient Wallet Address
+            the caller's transaction must include a surplus fee to cover the inner
+            transaction
+
+        Args:
+            recipient: An account who will receive the withdrawn Algos. This may or may not be the same 
+            as the method call sender.
+
+        Docs: https://pyteal.readthedocs.io/en/stable/api.html#pyteal.TxnExpr
+
+        """
+
+        return Seq(
+            InnerTxnBuilder.Begin(),
+            InnerTxnBuilder.SetFields(
+                {
+                    TxnField.type_enum: TxnType.AssetConfig,
+                    TxnField.config_asset_url : Bytes("ipfs://"),
+                    TxnField.config_asset_name : Bytes("Dystopia 000s"),
+                    TxnField.config_asset_total : Int(1),
+                    TxnField.config_asset_unit_name : Bytes("D_000"),
+                    TxnField.fee : Int (0),
+                }
+            ),
+            InnerTxnBuilder.Submit(),
+        )
+
+
 
     approval_program, clear_state_program, contract = my_router.compile_program(
         version=8, optimize=OptimizeOptions(scratch_slots=True)
@@ -175,16 +234,18 @@ class BoxEscrow(Application):
 
 
 
+    """
+    Write Out the Approval and Clear Programs. 
+    Dump the Contract's method to a .json file.
 
+    """
 
-    #testing secrets conversion
-    #print (sha256b64("password"))
     with open("algobank_approval.teal", "w") as f:
         f.write(approval_program)
 
     with open("algobank_clear_state.teal", "w") as f:
         f.write(clear_state_program)
-   #     
+        
     with open("algobank.json", "w") as f:
         f.write(json.dumps(contract.dictify(), indent=4))
 
@@ -198,7 +259,7 @@ class BoxEscrow(Application):
 
     
 
-
+# Sha 265 Hashes a String
 def sha256b64(s: str) -> str:
     return base64.b64encode(hashlib.sha256(str(s).encode("utf-8")).digest()).decode("utf-8")
 
@@ -247,13 +308,16 @@ def create_algorand_node_and_acct():
     mnemonic_obj_b2 = mnemonic.to_public_key(__mnemonic_2)
     
 
-    escrow_address = "MBUZB6RELBF6TYLWB3WT5W25GDA26FBXJZONKN54XQP2QCY2CXIFSQOBU4"
+    escrow_address = "MBUZB6RELBF6TYLWB3WT5W25GDA26FBXJZONKN54XQP2QCY2CXIFSQOBU4" #can't figure out how to determine this yet, except through chainalysis.
     # Create an Application client containing both an algod client and my app
     
     app_client = algod.AlgodClient(algod_token, algod_address,headers={'User-Agent': 'DoYouLoveMe?'})
 
 
     print('Algod Client Status: ',algod_client.status())
+
+    
+    "Perform Transactions"
 
     _app_id : int = 155672004
 
@@ -275,7 +339,7 @@ def create_algorand_node_and_acct():
 
     #works
 
-    call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("withdraw"), 10000,accts[2]['pk'] )
+    call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("withdraw"), 0,accts[2]['pk'] )
 
 
 # Utility function to get the Method object for a given method name
@@ -285,9 +349,39 @@ def get_method(name: str) :
     c = Contract.from_json(js)
     for m in c.methods:
         if m.name == name:
+            print ("M: ",m.name)
             return m
     raise Exception("No method with the name {}".format(name))
 
+
+# Reads a local text file
+def parse(dataFilename : str)-> str:
+    data = []
+    try:
+        with open(dataFilename, "r") as file:
+            # read data until end of file
+            x = file.readlines()
+            while x != "":
+                #x = int(x.strip())    # remove \n, cast as int
+
+                #y = file.readline()
+                #y = int(y.strip())
+
+                #i = file.readline()
+                #i = int(i.strip())
+
+                data.append([x])
+
+                x = file.readline()
+
+    except FileNotFoundError as e:
+        print("File not found:", e)
+
+    
+    data_2=str(data.pop().pop()).replace("[", "")
+    data_2 = data_2.replace("]", "")
+    print (data_2)
+    return(data_2)
 
 def deploy(_params, mnemonic_ ,algod_client):
 
@@ -305,255 +399,29 @@ def deploy(_params, mnemonic_ ,algod_client):
 
 
     #Modernize this code to Read from the compiled Teal Source
-
-    approval_program = """
-#pragma version 8
-txn NumAppArgs
-int 0
-==
-bnz main_l8
-txna ApplicationArgs 0
-method "deposit(pay,account)void"
-==
-bnz main_l7
-txna ApplicationArgs 0
-method "getBalance(account)uint64"
-==
-bnz main_l6
-txna ApplicationArgs 0
-method "withdraw(uint64,account)void"
-==
-bnz main_l5
-err
-main_l5:
-txn OnCompletion
-int NoOp
-==
-txn ApplicationID
-int 0
-!=
-&&
-assert
-txna ApplicationArgs 1
-btoi
-store 3
-txna ApplicationArgs 2
-int 0
-getbyte
-store 4
-load 3
-load 4
-callsub withdraw_3
-int 1
-return
-main_l6:
-txn OnCompletion
-int NoOp
-==
-txn ApplicationID
-int 0
-!=
-&&
-assert
-txna ApplicationArgs 1
-int 0
-getbyte
-callsub getBalance_2
-store 2
-byte 0x151f7c75
-load 2
-itob
-concat
-log
-int 1
-return
-main_l7:
-txn OnCompletion
-int NoOp
-==
-txn ApplicationID
-int 0
-!=
-&&
-txn OnCompletion
-int OptIn
-==
-txn ApplicationID
-int 0
-!=
-&&
-||
-assert
-txna ApplicationArgs 1
-int 0
-getbyte
-store 1
-txn GroupIndex
-int 1
--
-store 0
-load 0
-gtxns TypeEnum
-int pay
-==
-assert
-load 0
-load 1
-callsub deposit_1
-int 1
-return
-main_l8:
-txn OnCompletion
-int NoOp
-==
-bnz main_l18
-txn OnCompletion
-int OptIn
-==
-bnz main_l17
-txn OnCompletion
-int CloseOut
-==
-bnz main_l16
-txn OnCompletion
-int UpdateApplication
-==
-bnz main_l15
-txn OnCompletion
-int DeleteApplication
-==
-bnz main_l14
-err
-main_l14:
-txn ApplicationID
-int 0
-!=
-assert
-callsub assertsenderiscreator_0
-int 1
-return
-main_l15:
-txn ApplicationID
-int 0
-!=
-assert
-callsub assertsenderiscreator_0
-int 1
-return
-main_l16:
-txn ApplicationID
-int 0
-!=
-assert
-byte "lost"
-byte "lost"
-app_global_get
-txn Sender
-byte "balance"
-app_local_get
-+
-app_global_put
-int 1
-return
-main_l17:
-int 1
-return
-main_l18:
-txn ApplicationID
-int 0
-==
-assert
-int 1
-return
-
-// assert_sender_is_creator
-assertsenderiscreator_0:
-txn Sender
-global CreatorAddress
-==
-assert
-retsub
-
-// deposit
-deposit_1:
-store 6
-store 5
-load 5
-gtxns Sender
-load 6
-txnas Accounts
-==
-assert
-load 5
-gtxns Receiver
-global CurrentApplicationAddress
-==
-assert
-load 6
-txnas Accounts
-byte "balance"
-box_put
-retsub
-
-// getBalance
-getBalance_2:
-txnas Accounts
-byte "balance"
-app_local_get
-retsub
-
-// withdraw
-withdraw_3:
-store 8
-store 7
-txn Sender
-global CreatorAddress
-!=
-bnz withdraw_3_l3
-txn Sender
-global CreatorAddress
-==
-bz withdraw_3_l4
-int 1
-return
-withdraw_3_l3:
-itxn_begin
-int pay
-itxn_field TypeEnum
-load 8
-txnas Accounts
-itxn_field Receiver
-load 7
-itxn_field Amount
-int 0
-itxn_field Fee
-itxn_submit
-withdraw_3_l4:
-retsub
+    # Read the approvl file
+    
     """
+   
+    """
+
+    with open("algobank_approval.teal", "w") as f:
+        f.read(approval_program)
+
+    with open("algobank_clear_state.teal", "w") as f:
+        f.write(clear_state_program)
+   
+
+
+
+
+    # Read the clear file
+    approval_program = parse("algobank_approval.teal")#""" """
     
 
 
 
-    clear_state_program = """
-#pragma version 8
-txn NumAppArgs
-int 0
-==
-bnz main_l2
-err
-main_l2:
-byte "lost"
-byte "lost"
-app_global_get
-txn Sender
-byte "balance"
-app_local_get
-+
-app_global_put
-int 1
-return
-    """
+    clear_state_program = parse("algobank_clear_state.teal")#""" """
 
     
 
@@ -586,20 +454,10 @@ return
     #print(f"Currrent counter value: {result.return_value}")
 
     
-    #disabling for debugging
 
-    #try:
-    #    other_acct = accts.pop()
-    #     other_acct = accts[2]
-
-    #     other_client = app_client.prepare(signer=accts[2]['sk'])
-    #     other_client.call(BoxEscrow.withdraw, secret)
-    #except LogicException as e:
-    #    print("App call failed as expected.")
-    #    print(e)
-
-
-
+"""
+THE MAIN METHOD
+"""
 
 if __name__ == "__main__":
     
@@ -607,7 +465,9 @@ if __name__ == "__main__":
     ca = BoxEscrow()
     
 
-    create_algorand_node_and_acct()
+    #parse("algobank_clear_state.teal") #works
+
+    #create_algorand_node_and_acct()
     
     #deploy()
     #
