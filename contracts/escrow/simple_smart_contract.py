@@ -7,7 +7,15 @@ Configured to Testnet
 
 """
 
-
+# *************************************************
+# Simple Smart Contract by INhumanity_Studios
+# Released under MIT License
+# *************************************************
+# Simple SmartContract
+# 
+# Features:
+# Contains Sampled Txn for Algorand Blockchain 
+# 
 
 
 from algosdk.v2client import algod
@@ -21,9 +29,9 @@ import base64
 
 
 # user declared account mnemonics
-__mnemonic: str= "tank game arrive train bring taxi tackle popular bacon gasp tell pigeon error step leaf zone suit chest next swim luggage oblige opinion about execute"
+__mnemonic: str= ""
 
-__account: str="4KMRCP23JP4SM2L65WBLK6A3TPT723ILD27R7W755P7GAU5VCE7LJHAUEQ"
+__account: str=""
 
 
 
