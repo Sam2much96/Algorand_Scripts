@@ -196,7 +196,7 @@ class BoxEscrow(Application):
 
 
     @my_router.method
-    def mint_asset(recipient : abi.Account) -> Expr:
+    def mint(recipient : abi.Account) -> Expr:
         """Mints an Asset Token To a Recipient Wallet Address
             the caller's transaction must include a surplus fee to cover the inner
             transaction
@@ -214,11 +214,13 @@ class BoxEscrow(Application):
             InnerTxnBuilder.SetFields(
                 {
                     TxnField.type_enum: TxnType.AssetConfig,
-                    TxnField.config_asset_url : Bytes("ipfs://"),
+                    TxnField.config_asset_url : Bytes("ipfs://"), #Asset CID
                     TxnField.config_asset_name : Bytes("Dystopia 000s"),
                     TxnField.config_asset_total : Int(1),
                     TxnField.config_asset_unit_name : Bytes("D_000"),
                     TxnField.fee : Int (0),
+
+                    #asset recepient
                 }
             ),
             InnerTxnBuilder.Submit(),
@@ -317,24 +319,30 @@ def create_algorand_node_and_acct():
     print('Algod Client Status: ',algod_client.status())
 
     
-    "Perform Transactions"
+    "*****************Perform Transactions Operations**********************"
 
     _app_id : int = 155672004
 
 
+
+    "Deploy Smart Contract"
     #deploy(_params, accts[1]['sk'],algod_client)
 
+    
+    "Delete Smart Contract"
     #delete_app(algod_client, accts[1]['sk'], _app_id)
 
+    "Pay to Smart Contract"
     #pay(algod_client, accts[1]['sk'], escrow_address, 1101101)
     
     
-
+    "Call SmartContract"
     #call_app(algod_client, accts[2]['sk'], _app_id, "withdraw(0,RJ6STB3FL6VNNRSIMA3K5EU4DQIJJ6FAZEOIHQZA7B4GGUNLU4VSXACWYY)void")
 
     
     #txn = pay_construct(app_client, accts[1]['sk'], "MBUZB6RELBF6TYLWB3WT5W25GDA26FBXJZONKN54XQP2QCY2CXIFSQOBU4", 100_000)
 
+    "Call Arc 4 SmartContract"
     #call_app_method(app_client, accts[1]['sk'],_app_id, 1000, get_method('deposit'), txn, accts[1]['pk'] )   
 
     #works
