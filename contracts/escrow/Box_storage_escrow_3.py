@@ -56,8 +56,9 @@ class BoxEscrow(Application):
     
     #ledger = Mapping(abi.Address, abi.Uint64)
     #uses nonce https://www.investopedia.com/terms/n/nonce.asp
-    scratch_storage = ScratchVar(TealType.bytes)
-    byte_storage = Bytes("owner")  # byteslice
+    
+    #scratch_storage = ScratchVar(TealType.bytes)
+    #byte_storage = Bytes("owner")  # byteslice
 
     @Subroutine(TealType.none)  #Bare app calls https://pyteal.readthedocs.io/en/stable/abi.html?highlight=registrable%20methods#registering-bare-app-calls
     def assert_sender_is_creator() -> Expr:
@@ -71,7 +72,22 @@ class BoxEscrow(Application):
         App.globalGet(Bytes("lost")) + App.localGet(Txn.sender(), Bytes("balance")),
     )
 
-
+    # Allocate a box called "BoxA" of byte size 100 and ignore the return value
+    # "Pop()" Discards the return value 
+    create_storage_boxes = Seq(
+        Pop(App.box_create(Bytes("BoxA"), Int(100))),
+        Pop(App.box_create(Bytes("BoxB"), Int(100))),
+        Pop(App.box_create(Bytes("BoxC"), Int(100)))
+        )
+                
+                
+                
+    """
+    Docs:
+        https://pyteal.readthedocs.io/en/stable/abi.html?highlight=call_config#registering-methods
+ 
+    """
+    
     my_router = Router(
     name="AlgoBank",
     bare_calls=BareCallActions(
@@ -115,12 +131,10 @@ class BoxEscrow(Application):
 
 
 
+        # write to box `A` with new value
+        # Deposit Address
+        App.box_put(Bytes("BoxA"), sender.address())
 
-            App.box_put(
-                sender.address(),
-                Bytes("balance"),
-                #App.localGet(sender.address(), Bytes("balance")) + payment.get().amount(),
-            ),
         )
 
 
@@ -162,6 +176,7 @@ class BoxEscrow(Application):
             If(Txn.sender() != Global.creator_address()) 
 
             .Then( 
+
                 InnerTxnBuilder.Begin(),
                 InnerTxnBuilder.SetFields(
                     {
@@ -172,26 +187,43 @@ class BoxEscrow(Application):
                     }
                 ),
                 InnerTxnBuilder.Submit(),
+
+                # write to box `B` with new value "Withdrawal Amount"
+                App.box_put(Bytes("BoxB"), Itob(amount.get())),
+
+                # write to box `C` with new value "Withdrawal To Address"
+                App.box_put(Bytes("BoxC"), recipient.address())
                 )
             .ElseIf( Txn.sender() == Global.creator_address())
             .Then(Approve())
         )
 
 
-    # Triggers an Abi method call via smartcontracts 
-    #@my_router.method
-    #def method_call() -> Expr:
+    
 
-    #return Seq (
-    #    InnerTxnBuilder.Begin()
-    #    InnerTxnBuilder.MethodCall(
-    #    app_id=app_id,
-    #    method_signature=method_signature,
-    #    args=args,
-    #    extra_fields=extra_fields,
-    #    ),
-    #    InnerTxnBuilder.Submit()
-    #    )
+    @my_router.method
+    def method_call() -> Expr:
+        """
+        Triggers an Abi method call via smartcontracts
+
+
+        Args:
+            Abi Arguments to this method
+
+        Docs: https://pyteal.readthedocs.io/en/stable/api.html?highlight=MethodCall#pyteal.InnerTxnBuilder.MethodCall
+
+        """
+
+        return Seq (
+            InnerTxnBuilder.Begin(),
+            InnerTxnBuilder.MethodCall(
+            app_id=Global.current_application_id(),
+            method_signature=method_signature,
+            args=args,
+            extra_fields=extra_fields,
+            ),
+            InnerTxnBuilder.Submit()
+            )
 
 
 
@@ -219,6 +251,7 @@ class BoxEscrow(Application):
                     TxnField.config_asset_total : Int(1),
                     TxnField.config_asset_unit_name : Bytes("D_000"),
                     TxnField.fee : Int (0),
+                    TxnField.receiver : recipient.address()
 
                     #asset recepient
                 }
