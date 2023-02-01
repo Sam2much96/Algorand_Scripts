@@ -14,6 +14,9 @@
 # (3) Deposit
 # (4) NFT minting
 
+# To Do:
+# (1) Onchain Method Call 
+
 from pyteal import *
 from beaker import *
 
@@ -189,6 +192,7 @@ class BoxEscrow(Application):
                 InnerTxnBuilder.Submit(),
 
                 # write to box `B` with new value "Withdrawal Amount"
+                # converted from an Integer to a Byte
                 App.box_put(Bytes("BoxB"), Itob(amount.get())),
 
                 # write to box `C` with new value "Withdrawal To Address"
@@ -200,30 +204,30 @@ class BoxEscrow(Application):
 
 
     
+    # Disabled
+    #@my_router.method
+    #def method_call() -> Expr:
+    #    """
+    #    Triggers an Abi method call via smartcontracts
 
-    @my_router.method
-    def method_call() -> Expr:
-        """
-        Triggers an Abi method call via smartcontracts
 
+    #    Args:
+    #        Abi Arguments to this method
 
-        Args:
-            Abi Arguments to this method
+    #    Docs: https://pyteal.readthedocs.io/en/stable/api.html?highlight=MethodCall#pyteal.InnerTxnBuilder.MethodCall
 
-        Docs: https://pyteal.readthedocs.io/en/stable/api.html?highlight=MethodCall#pyteal.InnerTxnBuilder.MethodCall
+    #    """
 
-        """
-
-        return Seq (
-            InnerTxnBuilder.Begin(),
-            InnerTxnBuilder.MethodCall(
-            app_id=Global.current_application_id(),
-            method_signature=method_signature,
-            args=args,
-            extra_fields=extra_fields,
-            ),
-            InnerTxnBuilder.Submit()
-            )
+    #    return Seq (
+    #        InnerTxnBuilder.Begin(),
+    #        InnerTxnBuilder.MethodCall(
+    #        app_id=Global.current_application_id(),
+    #        method_signature=method_signature,
+    #        args=args,
+    #        extra_fields=extra_fields,
+    #        ),
+    #        InnerTxnBuilder.Submit()
+    #        )
 
 
 
