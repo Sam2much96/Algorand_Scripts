@@ -47,23 +47,22 @@ from algosdk.future import transaction
 from algosdk.abi import Contract
 
 
-# Create a class, subclassing Application from beaker
+# Arc 4 Smart Contract
+
 class BoxEscrow(Application):
 
+    #uses nonce https://www.investopedia.com/terms/n/nonce.asp
     hashed_secret: Final[ApplicationStateValue] = ApplicationStateValue(
         stack_type=TealType.bytes,
-        descr="A scratch for saving secret has to application state",
+        descr="A scratch for saving secret nonce to application state",
     )
     
     #store transaction details to  boxes
     
-    #ledger = Mapping(abi.Address, abi.Uint64)
-    #uses nonce https://www.investopedia.com/terms/n/nonce.asp
+ 
     
-    #scratch_storage = ScratchVar(TealType.bytes)
-    #byte_storage = Bytes("owner")  # byteslice
-
-    @Subroutine(TealType.none)  #Bare app calls https://pyteal.readthedocs.io/en/stable/abi.html?highlight=registrable%20methods#registering-bare-app-calls
+    #Bare app calls https://pyteal.readthedocs.io/en/stable/abi.html?highlight=registrable%20methods#registering-bare-app-calls
+    @Subroutine(TealType.none)  
     def assert_sender_is_creator() -> Expr:
         return Seq(Assert(Txn.sender() == Global.creator_address()))
 
@@ -77,6 +76,7 @@ class BoxEscrow(Application):
 
     # Allocate a box called "BoxA" of byte size 100 and ignore the return value
     # "Pop()" Discards the return value 
+    # Docs: https://developer.algorand.org/docs/get-details/dapps/smart-contracts/apps/#passing-arguments-to-smart-contracts
     create_storage_boxes = Seq(
         Pop(App.box_create(Bytes("BoxA"), Int(100))),
         Pop(App.box_create(Bytes("BoxB"), Int(100))),
@@ -302,8 +302,10 @@ class BoxEscrow(Application):
 def sha256b64(s: str) -> str:
     return base64.b64encode(hashlib.sha256(str(s).encode("utf-8")).digest()).decode("utf-8")
 
-#running tests on sandbox env
-def create_algorand_node_and_acct():
+#Configured to Testnet
+#
+#
+def create_algorand_node_and_acct(command: str):
     
     # test-net
     algod_address = "https://node.testnet.algoexplorerapi.io"
@@ -358,33 +360,42 @@ def create_algorand_node_and_acct():
     
     "*****************Perform Transactions Operations**********************"
 
-    _app_id : int = 155672004
+    match command:
+        case "deploy":
+
+            #_app_id : int = 155672004
 
 
 
-    "Deploy Smart Contract"
-    #deploy(_params, accts[1]['sk'],algod_client)
-
+            "Deploy Smart Contract"
+            deploy(_params, accts[1]['sk'],algod_client)
+        case "delete":
     
-    "Delete Smart Contract"
-    #delete_app(algod_client, accts[1]['sk'], _app_id)
+            "Delete Smart Contract"
+            delete_app(algod_client, accts[1]['sk'], _app_id)
+        case "pay" :
+        
 
-    "Pay to Smart Contract"
-    #pay(algod_client, accts[1]['sk'], escrow_address, 1101101)
+            "Pay to Smart Contract"
+            pay(algod_client, accts[1]['sk'], escrow_address, 1101101)
     
+        case "call app":
     
-    "Call SmartContract"
-    #call_app(algod_client, accts[2]['sk'], _app_id, "withdraw(0,RJ6STB3FL6VNNRSIMA3K5EU4DQIJJ6FAZEOIHQZA7B4GGUNLU4VSXACWYY)void")
+           "Call SmartContract"
+           call_app(algod_client, accts[2]['sk'], _app_id, "withdraw(0,RJ6STB3FL6VNNRSIMA3K5EU4DQIJJ6FAZEOIHQZA7B4GGUNLU4VSXACWYY)void")
 
+        case "call app method":
     
-    #txn = pay_construct(app_client, accts[1]['sk'], "MBUZB6RELBF6TYLWB3WT5W25GDA26FBXJZONKN54XQP2QCY2CXIFSQOBU4", 100_000)
 
-    "Call Arc 4 SmartContract"
-    #call_app_method(app_client, accts[1]['sk'],_app_id, 1000, get_method('deposit'), txn, accts[1]['pk'] )   
+            "Call Arc 4 SmartContract"
+            #call_app_method(app_client, accts[1]['sk'],_app_id, 1000, get_method('deposit'), txn, accts[1]['pk'] )   
 
-    #works
+            
+            call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("withdraw"), 0,accts[2]['pk'] )
 
-    call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("withdraw"), 0,accts[2]['pk'] )
+            #txn = pay_construct(app_client, accts[1]['sk'], "MBUZB6RELBF6TYLWB3WT5W25GDA26FBXJZONKN54XQP2QCY2CXIFSQOBU4", 100_000)
+        case other:
+            print ("No Match Found, Please Pass a Valid command to this Method in ln 309")
 
 
 # Utility function to get the Method object for a given method name
@@ -429,10 +440,6 @@ def parse(dataFilename : str)-> str:
     return(data_2)
 
 def deploy(_params, mnemonic_ ,algod_client):
-
-    #app_client = ApplicationClient(client=algod_client, app=BoxEscrow(),sender=accts[1]['pk'] ,signer=accts[1]['sk'])
-
-    #secret = sha256b64("password") #XohImNooBHFR0OVvjcYpJ3NgPQ1qq73WKhHvch0VQtg=
 
     # declare application state storage (immutable)
     local_ints = 0
@@ -488,17 +495,8 @@ def deploy(_params, mnemonic_ ,algod_client):
     app_id, app_addr, txid = create_app(algod_client,_params ,mnemonic_, approval_program_compiled, clear_state_program_compiled, global_schema, local_schema)
 
     # Create the applicatiion on chain, set the app id for the app client & store app secret
-    #app_id, app_addr, txid = #app_client.create(sender=mnemonic_obj_2, signer=mnemonic_obj_2)
-    
     print(f"Created App with id: {app_id} and address addr: {app_addr} in tx: {txid}")
 
-    #app_client.call(BoxEscrow.withdraw)
-    
-    #result = app_client.call(BoxEscrow.withdraw, 101_100, accts[2]['pk'])
-    
-    #print(f"Currrent counter value: {result.return_value}")
-
-    
 
 """
 THE MAIN METHOD
@@ -510,9 +508,7 @@ if __name__ == "__main__":
     ca = BoxEscrow()
     
 
-    #parse("algobank_clear_state.teal") #works
-
-    #create_algorand_node_and_acct()
+    # Application State Machine
+    create_algorand_node_and_acct("")
     
-    #deploy()
-    #
+
