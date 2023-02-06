@@ -486,10 +486,10 @@ def deploy(_params, mnemonic_ ,algod_client):
     clear_state_program_compiled = compile_program(algod_client, clear_state_program)
 
 
-    app_id, app_addr, txid = create_app(algod_client,_params ,mnemonic_, approval_program_compiled, clear_state_program_compiled, global_schema, local_schema)
+    app_id = create_app(algod_client,_params ,mnemonic_, approval_program_compiled, clear_state_program_compiled, global_schema, local_schema)
 
     # Create the applicatiion on chain, set the app id for the app client & store app secret
-    print(f"Created App with id: {app_id} and address addr: {app_addr} in tx: {txid}")
+    print(f"Created App with id: {app_id} ") 
 
 
 """
