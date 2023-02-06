@@ -355,6 +355,8 @@ def create_algorand_node_and_acct(command: str):
     app_client = algod.AlgodClient(algod_token, algod_address,headers={'User-Agent': 'DoYouLoveMe?'})
 
 
+    _app_id : int = 157450689
+
     print('Algod Client Status: ',algod_client.status())
 
     
@@ -363,7 +365,7 @@ def create_algorand_node_and_acct(command: str):
     match command:
         case "deploy":
 
-            #_app_id : int = 155672004
+            
 
 
 
@@ -450,30 +452,22 @@ def deploy(_params, mnemonic_ ,algod_client):
     local_schema = transaction.StateSchema(local_ints, local_bytes)
 
 
-    #Modernize this code to Read from the compiled Teal Source
-    # Read the approvl file
+    # Read the compiled approvl & clear programs Teal files 
     
     """
    
     """
 
-    with open("algobank_approval.teal", "w") as f:
-        f.read(approval_program)
+    with open("algobank_approval.teal", "r") as f:
+        approval_program = f.read()
 
-    with open("algobank_clear_state.teal", "w") as f:
-        f.write(clear_state_program)
+    with open("algobank_clear_state.teal", "r") as f:
+        clear_state_program= f.read()
    
 
 
 
 
-    # Read the clear file
-    approval_program = parse("algobank_approval.teal")#""" """
-    
-
-
-
-    clear_state_program = parse("algobank_clear_state.teal")#""" """
 
     
 
@@ -509,6 +503,6 @@ if __name__ == "__main__":
     
 
     # Application State Machine
-    create_algorand_node_and_acct("")
+    create_algorand_node_and_acct("deploy")
     
 
