@@ -8,9 +8,16 @@
 ##  Features
 
 **(1) Box Storage** 
+
+
 **(2) Escrow Withdrawals**
+
+
 **(3) Escrow Deposits**
+
+
 **(4) L1 Algorand Transaction Logic all implemented in one script**
+
 
 ## Additional Features
 
