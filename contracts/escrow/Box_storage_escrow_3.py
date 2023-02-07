@@ -352,7 +352,7 @@ def create_algorand_node_and_acct(command: str):
     app_client = algod.AlgodClient(algod_token, algod_address,headers={'User-Agent': 'DoYouLoveMe?'})
 
 
-    _app_id : int = 157575009  
+    _app_id : int = 157584312  
 
 
     print('Algod Client Status: ',algod_client.status())
@@ -394,12 +394,9 @@ def create_algorand_node_and_acct(command: str):
         
         case "deposit":
 
-               # create a Signer Object
-            signer = AccountTransactionSigner(__mnemonic_2)
 
-            #txn = transaction.PaymentTxn(accts[2]['pk'], _params, _app_id, 101000)
 
-            #txn = abi.PaymentTransaction
+            txn = pay_construct(app_client, accts[2]['pk'], accts[2]['sk'], 101100)
 
             call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("deposit"), txn ,accts[2]['pk'] )
 
