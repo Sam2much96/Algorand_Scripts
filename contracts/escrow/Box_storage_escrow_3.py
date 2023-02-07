@@ -46,6 +46,8 @@ from simple_smart_contract import create_app, compile_program, call_app, delete_
 from algosdk.future import transaction
 from algosdk.abi import Contract
 
+# For running Teal inspector
+import subprocess
 
 # Arc 4 Smart Contract
 
@@ -75,17 +77,7 @@ class BoxEscrow(Application):
     )
 
 
-
-
-
-    # Allocate a box called "BoxA" of byte size 100 and ignore the return value
-    # "Pop()" Discards the return value 
-    # Docs: https://developer.algorand.org/docs/get-details/dapps/smart-contracts/apps/#passing-arguments-to-smart-contracts
-    #create_storage_boxes = Seq(
-    #    #Pop(App.box_create(Bytes("BoxA"), Int(100))),
-    #    Pop(App.box_create(Bytes("BoxB"), Int(50))),
-    #    #Pop(App.box_create(Bytes("BoxC"), Int(100)))
-    #    )
+    
                 
                 
                 
@@ -141,10 +133,10 @@ class BoxEscrow(Application):
 
         # write to box `A` with new value
         # Deposit Address
-        #App.box_put(Bytes("BoxA"), sender.address())
+        #Pop(App.box_create(Bytes("BoxA"), Int(10))),
+        App.box_put(Bytes("BoxA"), sender.address())
 
         )
-
 
 
     @my_router.method
@@ -196,15 +188,14 @@ class BoxEscrow(Application):
                 ),
                 InnerTxnBuilder.Submit(),
 
-                # disabled for debugging
+  
+  
                 # write to box `B` with new value "Withdrawal Amount"
                 # converted from an Integer to a Byte
-                #App.box_put(Bytes("BoxB"), Itob(amount.get())),
-                #Pop(App.box_create(Bytes("BoxB"), Int(100))),
-                #App.box_put(Bytes("BoxB"), Itob(amount.get()))
-
+                App.box_put(Bytes("BoxB"), Itob(amount.get())),
+                
                 # write to box `C` with new value "Withdrawal To Address"
-                #App.box_put(Bytes("BoxC"), recipient.address())
+                App.box_put(Bytes("BoxC"), recipient.address())
                 )
             .ElseIf( Txn.sender() == Global.creator_address())
             .Then(Approve())
@@ -212,15 +203,12 @@ class BoxEscrow(Application):
 
 
     
-    # Disabled
-    #@my_router.method
-    #def method_call() -> Expr:
     #    """
     #    Triggers an Abi method call via smartcontracts
 
 
     #    Args:
-    #        Abi Arguments to this method
+    #        Abi Arguments to this method via BareApp calls
 
     #    Docs: https://pyteal.readthedocs.io/en/stable/api.html?highlight=MethodCall#pyteal.InnerTxnBuilder.MethodCall
 
@@ -230,7 +218,7 @@ class BoxEscrow(Application):
 
 
     @my_router.method
-    def mint(recipient : abi.Account) -> Expr:
+    def mint(recipient : abi.Account, payment: abi.PaymentTransaction) -> Expr:
         """Mints an Asset Token To a Recipient Wallet Address
             the caller's transaction must include a surplus fee to cover the inner
             transaction
@@ -318,11 +306,8 @@ def create_algorand_node_and_acct(command: str):
 
     __mnemonic_2 : str = "degree feature waste gospel screen near subject boost wreck proof caution hen adapt fiber fault level blind entry also embark oval board bunker absorb garage"
 
-    
-    #_params.fee = 100
 
-
-    #rewrite for testnet
+    #For Sandbox
     #client = sandbox.get_algod_client()
 
     #accts = sandbox.get_accounts()
@@ -351,18 +336,21 @@ def create_algorand_node_and_acct(command: str):
     mnemonic_obj_b2 = mnemonic.to_public_key(__mnemonic_2)
     
 
-    escrow_address = "K7FDN57SULKK6AGT64LBYH4PCB6EXITLHABSAZ7BSPYII3YZNJXZ7E3ERE" #can't figure out how to determine this yet, except through chainalysis.
+
     # Create an Application client containing both an algod client and my app
     
     app_client = algod.AlgodClient(algod_token, algod_address,headers={'User-Agent': 'DoYouLoveMe?'})
 
 
-    _app_id : int = 157586762  
+    _app_id : int = 157627837  
 
+    escrow_address =get_application_address(_app_id)
+
+    pc :int = 79
 
     print('Algod Client Status: ',algod_client.status())
 
-    command = input("Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance, delete ]  ")
+    command = input("Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance, delete, debug ]  ")
     
     "*****************Perform Transactions Operations**********************"
 
@@ -381,6 +369,7 @@ def create_algorand_node_and_acct(command: str):
             delete_app(algod_client, accts[1]['sk'], _app_id)
         case "pay" :
         
+            
 
             "Pay to Smart Contract"
             pay(algod_client, accts[1]['sk'], escrow_address, 1101101)
@@ -388,44 +377,49 @@ def create_algorand_node_and_acct(command: str):
         case "call app":
     
            "Call SmartContract"
-           call_app(algod_client, accts[2]['sk'], _app_id, "withdraw(0,RJ6STB3FL6VNNRSIMA3K5EU4DQIJJ6FAZEOIHQZA7B4GGUNLU4VSXACWYY)void")
+           call_app(algod_client, accts[2]['sk'], _app_id, "cr8_boxes")
 
         case "withdraw":
     
             
-            call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("withdraw"), 0,accts[2]['pk'] )
+            call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("withdraw"), 10_000,accts[2]['pk'] )
 
-            #txn = pay_construct(app_client, accts[1]['sk'], "MBUZB6RELBF6TYLWB3WT5W25GDA26FBXJZONKN54XQP2QCY2CXIFSQOBU4", 100_000)
-        
         case "deposit":
 
-            escrow_address = get_application_address(_app_id)
+        
 
-            print ("escrow_address: ", escrow_address)
-
-            print ("depositing to Escrow Address")
+            print ("depositing 101100 MicroAlgos to Escrow Address ", escrow_address)
 
             txn = pay_construct(app_client, accts[2]['pk'], escrow_address , accts[2]['sk'], 101100)
 
             call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("deposit"), txn ,accts[2]['pk'] )
 
+        case "get_balance":
 
-        case "mint":
+            # create optin txn
+            # call method
+            return 9
 
-            call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("mint"), 0,accts[2]['pk'] )
+        case "update" :
+            # updates the app rather than deleting and reupload
+            return 8
 
 
         case "method_call":
 
             # Calls a smartcontract Abi call via a Bare Call app txn
 
-            call_app(app_client,accts[2]['sk'],_app_id, 2500,get_method("method_call"), 0,accts[2]['pk'] )
+            call_app(app_client,accts[2]['sk'],_app_id, 2500,get_method("method_call"),accts[2]['pk'] )
 
         case "balance":
 
-            call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("balance"), 0,accts[2]['pk'] )
+            call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("balance"),accts[2]['pk'] )
 
-
+        case "debug":
+            pc =input ("enter program counter")
+            # Using system() method  and Teal Inspector to
+            # execute shell commands
+            subprocess.Popen('tealinspector --network testnet --application_id {} --program_counter {}'.format(_app_id, pc), shell=True)
 
         case other:
             print ("No Match Found, Please Pass a Valid command to this Method in ln 309")
