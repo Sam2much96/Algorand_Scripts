@@ -106,25 +106,24 @@ def wait_for_confirmation(client, txid):
         )
     )
 
-def pay_construct( client , private_key, receipent, amount):
-   # declare sender
-    sender = account.address_from_private_key(private_key)
-    print("Call from account:", sender)
+def pay_construct( client , addr, private_key, amount):
+       
+    # Create signer object
+    signer = AccountTransactionSigner(private_key)
 
-    # get node suggested parameters
-    params = client.suggested_params()
-    # comment out the next two (2) lines to use suggested fees
-    
-    #params.flat_fee = True
-    #params.fee = 1000
+    # Get suggested params from the client
+    sp = client.suggested_params()
 
-    #app_args.encode('utf-8')
-    # create unsigned transaction
-    #txn = transaction.ApplicationNoOpTxn(sender, params, index, app_args)
+    # Create a transaction
+    ptxn = transaction.PaymentTxn(addr, sp, addr, amount)
 
-    txn = transaction.PaymentTxn(sender, params, receipent, amount)
+    # Construct TransactionWithSigner
+    tws = TransactionWithSigner(ptxn, signer)
 
-    return txn
+    # Pass TransactionWithSigner to ATC
+    #atc.add_transaction(tws)
+
+    return tws
 
 
 def pay( client , private_key, receipent, amount):
@@ -145,7 +144,7 @@ def pay( client , private_key, receipent, amount):
 
     txn = transaction.PaymentTxn(sender, params, receipent, amount)
 
-    print("App call txn: ", txn)
+    print("App Pay txn: ", txn)
 
 
     # sign transaction
