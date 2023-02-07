@@ -2,8 +2,11 @@
 
 # How to Use:
  
- """
+   ```
   $python3 Box_storage_escrow_3.py
+  ```
+ """
+  
 
   $Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance, delete ]  
   
