@@ -162,11 +162,11 @@ def pay( client , private_key, receipent, amount):
     # await confirmation
     wait_for_confirmation(client, tx_id)
 
-# call application method
+# Call application method
 # using Atomic Transaction composer
-#use Atomic Transaction Composer to construct method call to ABI method
+# use Atomic Transaction Composer to construct method call to ABI method
 #https://developer.algorand.org/docs/get-details/atc/?from_query=atomic%20tr#template-modal-overlay
-#works
+# The entire Smart Contract Uses 3 Boxes in line 207
 def call_app_method(client, private_key, index, fee, _method, arg1, arg2):
     # get sender address
     sender = account.address_from_private_key(private_key)
@@ -188,10 +188,11 @@ def call_app_method(client, private_key, index, fee, _method, arg1, arg2):
         sp = params,
         signer = signer,
         method_args = [arg1,arg2],
+        boxes = [[0, "BoxA"],[0, "BoxB"],[0, "BoxC"], [0,""],[0,""],[0,""]], #https://developer.algorand.org/docs/get-details/dapps/smart-contracts/apps/#smart-contract-arrays
 
         )
 
-    
+        
 
     #send transaction
     results = atc.execute(client, 2)
@@ -359,51 +360,6 @@ def clear_app(client, private_key, index):
     print("Cleared app-id:", transaction_response["txn"]["txn"]["apid"])
 
 
-def call_app_with_abi(client ,app_id : int, method, sender,params, signer, arg1, arg2 , deposit_acct):
-
-    atc = AtomicTransactionComposer()
-
-
-
-    
-
-
-    # Simple call to the `add` method, method_args can be any type but _must_ 
-    # match those in the method signature of the contract
-    atc.add_method_call(app_id, method, sender, params, signer, method_args=[arg1,arg2])
-
-       # get node suggested parameters
-    #params = client.suggested_params()
-    # comment out the next two (2) lines to use suggested fees
-    
-
-
-    # This method requires a `transaction` as its second argument. Construct the transaction and pass it in as an argument.
-    # The ATC will handle adding it to the group transaction and setting the reference in the application arguments.
-    
-    #ptxn = transaction.PaymentTxn(sender, params, deposit_acct, 10000)
-    #txn = TransactionWithSigner(ptxn, signer)
-    #atc.add_method_call(app_id, 'deposit', sender, params, signer, method_args=[txn, sender])
-    
-    
-    # txngroup = atc.build_group()
-    # txids = atc.submit(client)
- 
-
-    #sign_transactions(atc)
-
-    print ("Txn Debug: ",atc.get_status())
-
-    print ("Txn Debug: ",atc.get_tx_count())
-
-    print ("Txn Debug: ",atc.build_group())
-
-    atc.execute(client, 2)
-
-    #result = atc.execute(client, 2)
-
-    #for res in result.abi_results:
-    #    print(res.return_value)
 
 
 
