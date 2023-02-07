@@ -2,17 +2,15 @@
 
 # How to Use:
  
+ **Run the Script**
    ```
   $python3 Box_storage_escrow_3.py
   ```
- """
   
-
-  $Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance, delete ]  
-  
-  Type in the command you wish being performed. Any other command would throw an error.
- 
- """
+  **Type in the command you wish being performed. Any other command would throw an error.**
+  ```
+  $ Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance, delete ]
+  ```
 
 
 # Box Escrow:
