@@ -41,7 +41,7 @@ from beaker.consts import Algos
 from beaker.lib.storage import Mapping
 
 import json
-from simple_smart_contract import create_app, compile_program, call_app, delete_app, pay, call_app_method, pay_construct
+from simple_smart_contract import create_app, compile_program, call_app, delete_app, pay, call_app_method, pay_construct, get_application_address
 
 from algosdk.future import transaction
 from algosdk.abi import Contract
@@ -73,6 +73,10 @@ class BoxEscrow(Application):
         Bytes("lost"),
         App.globalGet(Bytes("lost")) + App.localGet(Txn.sender(), Bytes("balance")),
     )
+
+
+
+
 
     # Allocate a box called "BoxA" of byte size 100 and ignore the return value
     # "Pop()" Discards the return value 
@@ -137,7 +141,7 @@ class BoxEscrow(Application):
 
         # write to box `A` with new value
         # Deposit Address
-        App.box_put(Bytes("BoxA"), sender.address())
+        #App.box_put(Bytes("BoxA"), sender.address())
 
         )
 
@@ -192,11 +196,12 @@ class BoxEscrow(Application):
                 ),
                 InnerTxnBuilder.Submit(),
 
+                # disabled for debugging
                 # write to box `B` with new value "Withdrawal Amount"
                 # converted from an Integer to a Byte
                 #App.box_put(Bytes("BoxB"), Itob(amount.get())),
-                Pop(App.box_create(Bytes("BoxB"), Int(100))),
-                App.box_put(Bytes("BoxB"), Itob(amount.get()))
+                #Pop(App.box_create(Bytes("BoxB"), Int(100))),
+                #App.box_put(Bytes("BoxB"), Itob(amount.get()))
 
                 # write to box `C` with new value "Withdrawal To Address"
                 #App.box_put(Bytes("BoxC"), recipient.address())
@@ -346,18 +351,18 @@ def create_algorand_node_and_acct(command: str):
     mnemonic_obj_b2 = mnemonic.to_public_key(__mnemonic_2)
     
 
-    escrow_address = "MBUZB6RELBF6TYLWB3WT5W25GDA26FBXJZONKN54XQP2QCY2CXIFSQOBU4" #can't figure out how to determine this yet, except through chainalysis.
+    escrow_address = "K7FDN57SULKK6AGT64LBYH4PCB6EXITLHABSAZ7BSPYII3YZNJXZ7E3ERE" #can't figure out how to determine this yet, except through chainalysis.
     # Create an Application client containing both an algod client and my app
     
     app_client = algod.AlgodClient(algod_token, algod_address,headers={'User-Agent': 'DoYouLoveMe?'})
 
 
-    _app_id : int = 157584312  
+    _app_id : int = 157586762  
 
 
     print('Algod Client Status: ',algod_client.status())
 
-    command = input("Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance]  ")
+    command = input("Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance, delete ]  ")
     
     "*****************Perform Transactions Operations**********************"
 
@@ -394,9 +399,13 @@ def create_algorand_node_and_acct(command: str):
         
         case "deposit":
 
+            escrow_address = get_application_address(_app_id)
 
+            print ("escrow_address: ", escrow_address)
 
-            txn = pay_construct(app_client, accts[2]['pk'], accts[2]['sk'], 101100)
+            print ("depositing to Escrow Address")
+
+            txn = pay_construct(app_client, accts[2]['pk'], escrow_address , accts[2]['sk'], 101100)
 
             call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("deposit"), txn ,accts[2]['pk'] )
 
