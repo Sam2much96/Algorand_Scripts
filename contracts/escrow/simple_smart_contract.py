@@ -21,6 +21,7 @@ Configured to Testnet
 from algosdk.v2client import algod
 from algosdk import account
 from algosdk import mnemonic
+from algosdk import logic
 
 from algosdk.future import transaction
 from algosdk.atomic_transaction_composer import *
@@ -106,7 +107,11 @@ def wait_for_confirmation(client, txid):
         )
     )
 
-def pay_construct( client , addr, private_key, amount):
+def get_application_address(appID : int) -> str:
+    return logic.get_application_address(appID)
+
+
+def pay_construct( client , sender, receiver, private_key, amount):
        
     # Create signer object
     signer = AccountTransactionSigner(private_key)
@@ -115,7 +120,7 @@ def pay_construct( client , addr, private_key, amount):
     sp = client.suggested_params()
 
     # Create a transaction
-    ptxn = transaction.PaymentTxn(addr, sp, addr, amount)
+    ptxn = transaction.PaymentTxn(sender, sp, receiver, amount)
 
     # Construct TransactionWithSigner
     tws = TransactionWithSigner(ptxn, signer)
