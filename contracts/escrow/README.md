@@ -1,5 +1,16 @@
 ![Screenshot](https://github.com/Sam2much96/algorand_python_Scripts/blob/main/contracts/escrow/Box_Escrow_Logo.png)
 
+# How to Use:
+ 
+ """
+  $python3 Box_storage_escrow_3.py
+
+  $Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance, delete ]  
+  
+  Type in the command you wish being performed. Any other command would throw an error.
+ 
+ """
+
 
 # Box Escrow:
  
