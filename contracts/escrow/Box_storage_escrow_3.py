@@ -394,6 +394,12 @@ def create_algorand_node_and_acct(command: str):
 
             call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("deposit"), txn ,accts[2]['pk'] )
 
+        case "mint":
+
+            txn = pay_construct(app_client, accts[2]['pk'], escrow_address , accts[2]['sk'], 101100)            
+            call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("mint"), accts[2]['pk'] ,txn )
+            
+
         case "get_balance":
 
             # create optin txn
@@ -404,12 +410,15 @@ def create_algorand_node_and_acct(command: str):
             # updates the app rather than deleting and reupload
             return 8
 
+        case "fetch" :
+            
+            #Prints Withdrawal & Deposit Information from box storage
+            print("Withdrawal Amounts: ",app_client.application_box_by_name(_app_id,bytes("BoxB".encode())))
 
-        case "method_call":
-
-            # Calls a smartcontract Abi call via a Bare Call app txn
-
-            call_app(app_client,accts[2]['sk'],_app_id, 2500,get_method("method_call"),accts[2]['pk'] )
+            print("Withdrawal recipients: ",app_client.application_box_by_name(_app_id,bytes("BoxC".encode())))
+            print("Depositors Address: ",app_client.application_box_by_name(_app_id,bytes("BoxA".encode())))
+            #for box in app_client.get_box_names():
+            #    print(f"{box}: {app_client.get_box_contents(box)}")
 
         case "balance":
 
