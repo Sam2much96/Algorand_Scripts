@@ -77,11 +77,11 @@ class BoxEscrow(Application):
     # Allocate a box called "BoxA" of byte size 100 and ignore the return value
     # "Pop()" Discards the return value 
     # Docs: https://developer.algorand.org/docs/get-details/dapps/smart-contracts/apps/#passing-arguments-to-smart-contracts
-    create_storage_boxes = Seq(
-        Pop(App.box_create(Bytes("BoxA"), Int(100))),
-        Pop(App.box_create(Bytes("BoxB"), Int(100))),
-        Pop(App.box_create(Bytes("BoxC"), Int(100)))
-        )
+    #create_storage_boxes = Seq(
+    #    #Pop(App.box_create(Bytes("BoxA"), Int(100))),
+    #    Pop(App.box_create(Bytes("BoxB"), Int(50))),
+    #    #Pop(App.box_create(Bytes("BoxC"), Int(100)))
+    #    )
                 
                 
                 
@@ -95,6 +95,7 @@ class BoxEscrow(Application):
     name="AlgoBank",
     bare_calls=BareCallActions(
         # approve a creation no-op call 
+        #no_op=OnCompleteAction(action=Approve(), call_config=CallConfig.CREATE),
         no_op=OnCompleteAction(action=Approve(), call_config=CallConfig.CREATE),
         # approve opt-in calls during normal usage, and during creation as a convenience for the creator
         opt_in=OnCompleteAction(action=Approve(), call_config=CallConfig.ALL),
@@ -193,10 +194,12 @@ class BoxEscrow(Application):
 
                 # write to box `B` with new value "Withdrawal Amount"
                 # converted from an Integer to a Byte
-                App.box_put(Bytes("BoxB"), Itob(amount.get())),
+                #App.box_put(Bytes("BoxB"), Itob(amount.get())),
+                Pop(App.box_create(Bytes("BoxB"), Int(100))),
+                App.box_put(Bytes("BoxB"), Itob(amount.get()))
 
                 # write to box `C` with new value "Withdrawal To Address"
-                App.box_put(Bytes("BoxC"), recipient.address())
+                #App.box_put(Bytes("BoxC"), recipient.address())
                 )
             .ElseIf( Txn.sender() == Global.creator_address())
             .Then(Approve())
@@ -218,16 +221,6 @@ class BoxEscrow(Application):
 
     #    """
 
-    #    return Seq (
-    #        InnerTxnBuilder.Begin(),
-    #        InnerTxnBuilder.MethodCall(
-    #        app_id=Global.current_application_id(),
-    #        method_signature=method_signature,
-    #        args=args,
-    #        extra_fields=extra_fields,
-    #        ),
-    #        InnerTxnBuilder.Submit()
-    #        )
 
 
 
@@ -250,7 +243,7 @@ class BoxEscrow(Application):
             InnerTxnBuilder.SetFields(
                 {
                     TxnField.type_enum: TxnType.AssetConfig,
-                    TxnField.config_asset_url : Bytes("ipfs://"), #Asset CID
+                    TxnField.config_asset_url : Bytes("ipfs://QmXYApu5uDsfQHMx149LWJy3x5XRssUeiPzvqPJyLV2ABx"), #CryptoPunk Asset CID
                     TxnField.config_asset_name : Bytes("Dystopia 000s"),
                     TxnField.config_asset_total : Int(1),
                     TxnField.config_asset_unit_name : Bytes("D_000"),
@@ -320,6 +313,10 @@ def create_algorand_node_and_acct(command: str):
 
     __mnemonic_2 : str = "degree feature waste gospel screen near subject boost wreck proof caution hen adapt fiber fault level blind entry also embark oval board bunker absorb garage"
 
+    
+    #_params.fee = 100
+
+
     #rewrite for testnet
     #client = sandbox.get_algod_client()
 
@@ -355,10 +352,12 @@ def create_algorand_node_and_acct(command: str):
     app_client = algod.AlgodClient(algod_token, algod_address,headers={'User-Agent': 'DoYouLoveMe?'})
 
 
-    _app_id : int = 157450689
+    _app_id : int = 157575009  
+
 
     print('Algod Client Status: ',algod_client.status())
 
+    command = input("Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance]  ")
     
     "*****************Perform Transactions Operations**********************"
 
@@ -370,7 +369,7 @@ def create_algorand_node_and_acct(command: str):
 
 
             "Deploy Smart Contract"
-            deploy(_params, accts[1]['sk'],algod_client)
+            deploy(_params, accts[1]['sk'],algod_client, 2500)
         case "delete":
     
             "Delete Smart Contract"
@@ -386,16 +385,42 @@ def create_algorand_node_and_acct(command: str):
            "Call SmartContract"
            call_app(algod_client, accts[2]['sk'], _app_id, "withdraw(0,RJ6STB3FL6VNNRSIMA3K5EU4DQIJJ6FAZEOIHQZA7B4GGUNLU4VSXACWYY)void")
 
-        case "call app method":
+        case "withdraw":
     
-
-            "Call Arc 4 SmartContract"
-            #call_app_method(app_client, accts[1]['sk'],_app_id, 1000, get_method('deposit'), txn, accts[1]['pk'] )   
-
             
             call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("withdraw"), 0,accts[2]['pk'] )
 
             #txn = pay_construct(app_client, accts[1]['sk'], "MBUZB6RELBF6TYLWB3WT5W25GDA26FBXJZONKN54XQP2QCY2CXIFSQOBU4", 100_000)
+        
+        case "deposit":
+
+               # create a Signer Object
+            signer = AccountTransactionSigner(__mnemonic_2)
+
+            #txn = transaction.PaymentTxn(accts[2]['pk'], _params, _app_id, 101000)
+
+            #txn = abi.PaymentTransaction
+
+            call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("deposit"), txn ,accts[2]['pk'] )
+
+
+        case "mint":
+
+            call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("mint"), 0,accts[2]['pk'] )
+
+
+        case "method_call":
+
+            # Calls a smartcontract Abi call via a Bare Call app txn
+
+            call_app(app_client,accts[2]['sk'],_app_id, 2500,get_method("method_call"), 0,accts[2]['pk'] )
+
+        case "balance":
+
+            call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("balance"), 0,accts[2]['pk'] )
+
+
+
         case other:
             print ("No Match Found, Please Pass a Valid command to this Method in ln 309")
 
@@ -412,36 +437,12 @@ def get_method(name: str) :
     raise Exception("No method with the name {}".format(name))
 
 
-# Reads a local text file
-def parse(dataFilename : str)-> str:
-    data = []
-    try:
-        with open(dataFilename, "r") as file:
-            # read data until end of file
-            x = file.readlines()
-            while x != "":
-                #x = int(x.strip())    # remove \n, cast as int
 
-                #y = file.readline()
-                #y = int(y.strip())
+def deploy(_params, mnemonic_ ,algod_client, fee):
 
-                #i = file.readline()
-                #i = int(i.strip())
+    _params.flat_fee = True
+    _params.fee = fee
 
-                data.append([x])
-
-                x = file.readline()
-
-    except FileNotFoundError as e:
-        print("File not found:", e)
-
-    
-    data_2=str(data.pop().pop()).replace("[", "")
-    data_2 = data_2.replace("]", "")
-    print (data_2)
-    return(data_2)
-
-def deploy(_params, mnemonic_ ,algod_client):
 
     # declare application state storage (immutable)
     local_ints = 0
@@ -466,9 +467,6 @@ def deploy(_params, mnemonic_ ,algod_client):
    
 
 
-
-
-
     
 
 
@@ -489,7 +487,7 @@ def deploy(_params, mnemonic_ ,algod_client):
     app_id = create_app(algod_client,_params ,mnemonic_, approval_program_compiled, clear_state_program_compiled, global_schema, local_schema)
 
     # Create the applicatiion on chain, set the app id for the app client & store app secret
-    print(f"Created App with id: {app_id} ") 
+    print(f"Created App with id: {app_id} ")
 
 
 """
@@ -503,6 +501,6 @@ if __name__ == "__main__":
     
 
     # Application State Machine
-    create_algorand_node_and_acct("deploy")
+    create_algorand_node_and_acct("")
     
 
