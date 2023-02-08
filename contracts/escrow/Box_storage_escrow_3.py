@@ -46,6 +46,8 @@ from simple_smart_contract import create_app, compile_program, call_app, delete_
 from algosdk.future import transaction
 from algosdk.abi import Contract
 
+from algosdk.encoding import decode_address , encode_address
+
 # For running Teal inspector
 import subprocess
 
@@ -412,13 +414,36 @@ def create_algorand_node_and_acct(command: str):
 
         case "fetch" :
             
-            #Prints Withdrawal & Deposit Information from box storage
-            print("Withdrawal Amounts: ",app_client.application_box_by_name(_app_id,bytes("BoxB".encode())))
+            #Prints Withdrawal & Deposit Information from box storage as Raw Bytes
+            
 
-            print("Withdrawal recipients: ",app_client.application_box_by_name(_app_id,bytes("BoxC".encode())))
-            print("Depositors Address: ",app_client.application_box_by_name(_app_id,bytes("BoxA".encode())))
-            #for box in app_client.get_box_names():
-            #    print(f"{box}: {app_client.get_box_contents(box)}")
+            print("Withdrawal Amounts: ",app_client.application_box_by_name(_app_id,bytes("BoxB".encode('utf-8', 'strict'))))
+
+            print("Withdrawal recipients: ",app_client.application_box_by_name(_app_id,bytes("BoxC".encode('utf-8', 'strict'))))
+  
+            print("Depositors Address: ", app_client.application_box_by_name(_app_id,bytes("BoxA".encode('utf-8', 'strict'))))
+
+        case "fetch2" :
+            #Prints Withdrawal & Deposit Information from box storage Decoded to Int and String
+            #Documentation: https://developer.algorand.org/docs/get-details/encoding/
+            
+            result2 = app_client.application_box_by_name(_app_id,bytes("BoxC".encode('utf-8', 'strict')))
+            q =encode_address(base64.b64decode(result2["value"]))
+            print ("Withdrawal recipients: ",q)
+
+
+            result3 = app_client.application_box_by_name(_app_id,bytes("BoxA".encode('utf-8', 'strict')))
+            g =encode_address(base64.b64decode(result3["value"]))
+            print ("Depositors Addresses: ",g)
+
+
+
+            result =app_client.application_box_by_name(_app_id,bytes("BoxB".encode('utf-8', 'strict')))
+            
+            p = int.from_bytes(base64.b64decode(result["value"]), byteorder="big")
+            print("Withdrawal Amount: ",p)
+
+            
 
         case "balance":
 
