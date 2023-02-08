@@ -215,8 +215,14 @@ def update_app(algod_client, app_id, params,private_key,approval_program_compile
 
 
     # create unsigned transaction
-    txn = transaction.ApplicationUpdateTxn(sender, params, app_id, \
-                                        approval_program_compiled, clear_state_program_compiled)
+    txn = transaction.ApplicationUpdateTxn(
+        sender= sender, 
+        sp =params, 
+        index= app_id, 
+        approval_program= approval_program_compiled, 
+        clear_program= clear_state_program_compiled,
+        boxes=[[0, "BoxA"],[0, "BoxB"],[0, "BoxC"], [0,""],[0,""],[0,""]],
+        )
 
     # sign, send, await 
 
