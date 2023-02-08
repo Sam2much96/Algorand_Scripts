@@ -1,5 +1,7 @@
 ![Screenshot](https://github.com/Sam2much96/algorand_python_Scripts/blob/main/contracts/escrow/Box_Escrow_Logo.png)
 
+**Demo Video**
+
 [![Demo video](https://img.youtube.com/vi/BPCMQdgbb3M/hqdefault.jpg)](https://youtu.be/BPCMQdgbb3M)
 
 # How to Use:
@@ -30,13 +32,9 @@
 **(3) Escrow Deposits**
 
 
-**(4) Mints NFTs to user Address**
+**(4) Mints NFTs Assets**
 
+**(5) Debugs Teal Coding Teal Inspector**
 
-**(5) L1 Algorand Transaction Logic all implemented in one script**
+**(6) L1 Algorand Transaction Logic all implemented in one script, Update, Delete, Deploy and Call App Methods**
 
-
-## Additional Features
-
-**(1) ABI method calls via smartcontracts**
-.
