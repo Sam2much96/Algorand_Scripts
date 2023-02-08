@@ -261,30 +261,15 @@ class BoxEscrow(Application):
             }),
             InnerTxnBuilder.Submit(),
 
-            InnerTxnBuilder.Begin(),
-            InnerTxnBuilder.SetFields({
-                TxnField.type_enum: TxnType.AssetTransfer,
-                TxnField.asset_receiver: recipient.address(),
-                TxnField.asset_amount: Int(1),
-                TxnField.xfer_asset: Txn.assets[0], # Must be in the assets array sent as part of the application call
-            }),
-            InnerTxnBuilder.Submit(),
-
             #InnerTxnBuilder.Begin(),
-            #InnerTxnBuilder.SetFields(
-            #    {
-             #       TxnField.type_enum: TxnType.AssetConfig,
-             #       TxnField.config_asset_url : Bytes("ipfs://QmXYApu5uDsfQHMx149LWJy3x5XRssUeiPzvqPJyLV2ABx"), #CryptoPunk Asset CID
-             #       TxnField.config_asset_name : Bytes("Dystopia 000s"),
-              #      TxnField.config_asset_total : Int(1),
-               #     TxnField.config_asset_unit_name : Bytes("D_000"),
-                #    TxnField.fee : Int (0),
-                 #   TxnField.receiver : recipient.address()
-
-                    #asset recepient
-               # }
-            #),
+            #InnerTxnBuilder.SetFields({
+            #    TxnField.type_enum: TxnType.AssetTransfer,
+            #   TxnField.asset_receiver: recipient.address(),
+            #    TxnField.asset_amount: Int(1),
+            #    TxnField.xfer_asset: Txn.assets[0], # Must be in the assets array sent as part of the application call
+            #}),
             #InnerTxnBuilder.Submit(),
+
         )
 
 
@@ -344,6 +329,8 @@ def create_algorand_node_and_acct(command: str):
 
     __mnemonic_2 : str = "degree feature waste gospel screen near subject boost wreck proof caution hen adapt fiber fault level blind entry also embark oval board bunker absorb garage"
 
+    __mnemonic_3 : str = "scrub garment fashion column property obscure agree mobile maple stage pass boat snow diary canyon lesson under curtain impact earn calm maximum song ability together"
+
 
     #For Sandbox
     #client = sandbox.get_algod_client()
@@ -369,6 +356,11 @@ def create_algorand_node_and_acct(command: str):
     accts[2]['pk'] = mnemonic.to_public_key(__mnemonic_2)
     accts[2]['sk'] = mnemonic.to_private_key(__mnemonic_2)
 
+    accts[3] = {}
+    accts[3]['pk'] = mnemonic.to_public_key(__mnemonic_3)
+    accts[3]['sk'] = mnemonic.to_private_key(__mnemonic_3)
+
+
 
     mnemonic_obj_b1 = mnemonic.to_private_key(__mnemonic_2)
     mnemonic_obj_b2 = mnemonic.to_public_key(__mnemonic_2)
@@ -380,7 +372,7 @@ def create_algorand_node_and_acct(command: str):
     app_client = algod.AlgodClient(algod_token, algod_address,headers={'User-Agent': 'DoYouLoveMe?'})
 
 
-    _app_id : int = 157704280  
+    _app_id : int = 157718578  
 
     escrow_address =get_application_address(_app_id)
 
@@ -388,7 +380,7 @@ def create_algorand_node_and_acct(command: str):
 
     print('Algod Client Status: ',algod_client.status())
 
-    command = input("Enter command  [deploy,pay,withdraw,deposit,mint,fetch, fetch2, balance, delete, debug ]  ")
+    command = input("Enter command  [deploy,pay,withdraw,deposit,mint,fetch, fetch2, balance, delete, update ,debug ]  ")
     
     "*****************Perform Transactions Operations**********************"
 
@@ -411,16 +403,11 @@ def create_algorand_node_and_acct(command: str):
 
             "Pay to Smart Contract"
             pay(algod_client, accts[1]['sk'], escrow_address, 1101101)
-    
-        case "call app":
-    
-           "Call SmartContract"
-           call_app(algod_client, accts[2]['sk'], _app_id, "cr8_boxes")
 
         case "withdraw":
     
             
-            call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("withdraw"), 10_000,accts[2]['pk'] )
+            call_app_method(app_client,accts[3]['sk'],_app_id, 2500,get_method("withdraw"), 10_000,accts[3]['pk'] )
 
         case "deposit":
 
