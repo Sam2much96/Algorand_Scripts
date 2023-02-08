@@ -41,7 +41,7 @@ from beaker.consts import Algos
 from beaker.lib.storage import Mapping
 
 import json
-from simple_smart_contract import create_app, compile_program, call_app, delete_app, pay, call_app_method, pay_construct, get_application_address
+from simple_smart_contract import create_app, compile_program, call_app, delete_app, pay, call_app_method, pay_construct, get_application_address, update_app
 
 from algosdk.future import transaction
 from algosdk.abi import Contract
@@ -68,7 +68,19 @@ class BoxEscrow(Application):
     #Bare app calls https://pyteal.readthedocs.io/en/stable/abi.html?highlight=registrable%20methods#registering-bare-app-calls
     @Subroutine(TealType.none)  
     def assert_sender_is_creator() -> Expr:
-        return Seq(Assert(Txn.sender() == Global.creator_address()))
+        return Seq(
+            If(Txn.sender() == Global.creator_address())
+            .Then (
+
+                # If box Storage Exists, delete them
+                Pop(App.box_delete(Bytes("BoxA"))),
+                Pop(App.box_delete(Bytes("BoxB"))),
+                Pop(App.box_delete(Bytes("BoxC")))    
+
+
+                )
+
+            )
 
 
 
@@ -352,7 +364,7 @@ def create_algorand_node_and_acct(command: str):
 
     print('Algod Client Status: ',algod_client.status())
 
-    command = input("Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance, delete, debug ]  ")
+    command = input("Enter command  [deploy,pay,withdraw,deposit,mint,fetch, fetch2, balance, delete, debug ]  ")
     
     "*****************Perform Transactions Operations**********************"
 
@@ -395,22 +407,17 @@ def create_algorand_node_and_acct(command: str):
             txn = pay_construct(app_client, accts[2]['pk'], escrow_address , accts[2]['sk'], 101100)
 
             call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("deposit"), txn ,accts[2]['pk'] )
+        case "update":
+
+
+            update_(app_client, _app_id, _params,accts[1]['sk'])
+
 
         case "mint":
 
             txn = pay_construct(app_client, accts[2]['pk'], escrow_address , accts[2]['sk'], 101100)            
             call_app_method(app_client,accts[2]['sk'],_app_id, 2500,get_method("mint"), accts[2]['pk'] ,txn )
             
-
-        case "get_balance":
-
-            # create optin txn
-            # call method
-            return 9
-
-        case "update" :
-            # updates the app rather than deleting and reupload
-            return 8
 
         case "fetch" :
             
@@ -469,6 +476,33 @@ def get_method(name: str) :
             print ("M: ",m.name)
             return m
     raise Exception("No method with the name {}".format(name))
+
+
+def update_(algod_client, app_id, params, private_key):
+
+    #Docs: https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/transaction.html?highlight=ApplicationUpdateTxn#algosdk.transaction.ApplicationUpdateTxn
+
+
+    # Read the compiled approvl & clear programs Teal files 
+    
+    """
+   
+    """
+
+    with open("algobank_approval.teal", "r") as f:
+        approval_program = f.read()
+
+    with open("algobank_clear_state.teal", "r") as f:
+        clear_state_program= f.read()
+   
+
+    # compile program to binary
+    approval_program_compiled = compile_program(algod_client, approval_program)
+
+    # compile program to binary
+    clear_state_program_compiled = compile_program(algod_client, clear_state_program)
+
+    update_app(algod_client, app_id, params ,private_key, approval_program_compiled,clear_state_program_compiled)
 
 
 
