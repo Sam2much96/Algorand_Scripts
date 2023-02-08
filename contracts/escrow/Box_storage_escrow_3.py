@@ -247,20 +247,44 @@ class BoxEscrow(Application):
 
         return Seq(
             InnerTxnBuilder.Begin(),
-            InnerTxnBuilder.SetFields(
-                {
-                    TxnField.type_enum: TxnType.AssetConfig,
-                    TxnField.config_asset_url : Bytes("ipfs://QmXYApu5uDsfQHMx149LWJy3x5XRssUeiPzvqPJyLV2ABx"), #CryptoPunk Asset CID
-                    TxnField.config_asset_name : Bytes("Dystopia 000s"),
-                    TxnField.config_asset_total : Int(1),
-                    TxnField.config_asset_unit_name : Bytes("D_000"),
-                    TxnField.fee : Int (0),
-                    TxnField.receiver : recipient.address()
+            InnerTxnBuilder.SetFields({
+                TxnField.type_enum: TxnType.AssetConfig,
+                TxnField.config_asset_total: Int(1),
+                TxnField.config_asset_decimals: Int(1),
+                TxnField.config_asset_unit_name: Bytes("PUNK 001"),
+                TxnField.config_asset_name: Bytes("CryptoPunk"),
+                TxnField.config_asset_url: Bytes("ipfs://QmXYApu5uDsfQHMx149LWJy3x5XRssUeiPzvqPJyLV2ABx"), #CryptoPunk Asset CID
+                TxnField.config_asset_manager: Global.current_application_address(),
+                TxnField.config_asset_reserve: Global.current_application_address(),
+                TxnField.config_asset_freeze: Global.current_application_address(),
+                TxnField.config_asset_clawback: Global.current_application_address(),
+            }),
+            InnerTxnBuilder.Submit(),
+
+            InnerTxnBuilder.Begin(),
+            InnerTxnBuilder.SetFields({
+                TxnField.type_enum: TxnType.AssetTransfer,
+                TxnField.asset_receiver: recipient.address(),
+                TxnField.asset_amount: Int(1),
+                TxnField.xfer_asset: Txn.assets[0], # Must be in the assets array sent as part of the application call
+            }),
+            InnerTxnBuilder.Submit(),
+
+            #InnerTxnBuilder.Begin(),
+            #InnerTxnBuilder.SetFields(
+            #    {
+             #       TxnField.type_enum: TxnType.AssetConfig,
+             #       TxnField.config_asset_url : Bytes("ipfs://QmXYApu5uDsfQHMx149LWJy3x5XRssUeiPzvqPJyLV2ABx"), #CryptoPunk Asset CID
+             #       TxnField.config_asset_name : Bytes("Dystopia 000s"),
+              #      TxnField.config_asset_total : Int(1),
+               #     TxnField.config_asset_unit_name : Bytes("D_000"),
+                #    TxnField.fee : Int (0),
+                 #   TxnField.receiver : recipient.address()
 
                     #asset recepient
-                }
-            ),
-            InnerTxnBuilder.Submit(),
+               # }
+            #),
+            #InnerTxnBuilder.Submit(),
         )
 
 
@@ -356,7 +380,7 @@ def create_algorand_node_and_acct(command: str):
     app_client = algod.AlgodClient(algod_token, algod_address,headers={'User-Agent': 'DoYouLoveMe?'})
 
 
-    _app_id : int = 157627837  
+    _app_id : int = 157704280  
 
     escrow_address =get_application_address(_app_id)
 
