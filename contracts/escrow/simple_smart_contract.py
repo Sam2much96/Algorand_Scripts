@@ -201,6 +201,42 @@ def call_app_method(client, private_key, index, fee, _method, arg1, arg2):
     print("TXID: ", results.tx_ids[0])
     print("Result confirmed in round: {}".format(results.confirmed_round))
 
+def update_app(algod_client, app_id, params,private_key,approval_program_compiled, clear_state_program_compiled):
+
+    sender = account.address_from_private_key(private_key)
+
+    # compile program to binary
+    #approval_program_compiled = compile_program(algod_client, approval_program)
+
+    # compile program to binary
+    #clear_state_program_compiled = compile_program(algod_client, clear_state_program)
+
+
+
+
+    # create unsigned transaction
+    txn = transaction.ApplicationUpdateTxn(sender, params, app_id, \
+                                        approval_program_compiled, clear_state_program_compiled)
+
+    # sign, send, await 
+
+    # sign transaction
+    signed_txn = txn.sign(private_key)
+    tx_id = signed_txn.transaction.get_txid()
+
+    # send transaction
+    algod_client.send_transactions([signed_txn])
+
+    # await confirmation
+    wait_for_confirmation(algod_client, tx_id)
+
+
+
+    # display results
+    transaction_response = algod_client.pending_transaction_info(tx_id)
+    app_id = transaction_response['txn']['txn']['apid']
+    print("Updated existing app-id: ",app_id)
+
 
 
 
@@ -285,7 +321,12 @@ def delete_app(client, private_key, index):
     #params.fee = 1000
 
     # create unsigned transaction
-    txn = transaction.ApplicationDeleteTxn(sender, params, index)
+    txn = transaction.ApplicationDeleteTxn(
+        sender= sender, 
+        sp= params, 
+        index= index,
+        boxes=[[0, "BoxA"],[0, "BoxB"],[0, "BoxC"], [0,""],[0,""],[0,""]],
+        )
 
     # sign transaction
     signed_txn = txn.sign(private_key)
