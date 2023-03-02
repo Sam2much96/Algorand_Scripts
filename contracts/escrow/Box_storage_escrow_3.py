@@ -16,6 +16,7 @@
 
 # To Do:
 # (1) Onchain Method Call 
+# (2) Box Storage isn't yet supported in Algonaut Rust Crate, rewrite to use Global Storage
 
 from pyteal import *
 from beaker import *
@@ -144,11 +145,16 @@ class BoxEscrow(Application):
             Assert(payment.get().receiver() == Global.current_application_address()),
 
 
+        #Global Storage
+        App.globalPut(Bytes("Depositors"), sender.address()),
+                
+
+        # Disabling Box Storage Until it's implemented in Algonaut
 
         # write to box `A` with new value
         # Deposit Address
         #Pop(App.box_create(Bytes("BoxA"), Int(10))),
-        App.box_put(Bytes("BoxA"), sender.address())
+        #App.box_put(Bytes("BoxA"), sender.address())
 
         )
 
@@ -202,14 +208,20 @@ class BoxEscrow(Application):
                 ),
                 InnerTxnBuilder.Submit(),
 
-  
-  
+                #Global Storage
+                App.globalPut(Bytes("Withdrwl"), amount.get()),
+                
+                App.globalPut(Bytes("Receipient"), recipient.address()),
+                
+                
+                # Disabling Box Storages until it'simplemented in Algonaut
+
                 # write to box `B` with new value "Withdrawal Amount"
                 # converted from an Integer to a Byte
-                App.box_put(Bytes("BoxB"), Itob(amount.get())),
+                # App.box_put(Bytes("BoxB"), Itob(amount.get())),
                 
                 # write to box `C` with new value "Withdrawal To Address"
-                App.box_put(Bytes("BoxC"), recipient.address())
+                #App.box_put(Bytes("BoxC"), recipient.address())
                 )
             .ElseIf( Txn.sender() == Global.creator_address())
             .Then(Approve())
@@ -260,6 +272,8 @@ class BoxEscrow(Application):
                 TxnField.config_asset_clawback: Global.current_application_address(),
             }),
             InnerTxnBuilder.Submit(),
+
+            #Bug for Testing debug state
 
             #InnerTxnBuilder.Begin(),
             #InnerTxnBuilder.SetFields({
@@ -371,6 +385,7 @@ def create_algorand_node_and_acct(command: str):
     
     app_client = algod.AlgodClient(algod_token, algod_address,headers={'User-Agent': 'DoYouLoveMe?'})
 
+    
 
     _app_id : int = 157718578  
 
@@ -401,7 +416,7 @@ def create_algorand_node_and_acct(command: str):
         
             
 
-            "Pay to Smart Contract"
+            "Pay to Account"
             pay(algod_client, accts[1]['sk'], escrow_address, 1101101)
 
         case "withdraw":
