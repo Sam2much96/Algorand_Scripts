@@ -6,7 +6,7 @@
 
 # How to Use:
  
- **Run the Script**
+ **Run the Script in Python**
    ```
   $python3 Box_storage_escrow_3.py
   ```
@@ -15,6 +15,14 @@
   ```
   $ Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance, delete ]
   ```
+
+** Run the Shell Command in Sandbox Environment**
+
+  ```
+  $ goal app method --arg "1" --arg "47K35YGGZQWMRL4QJ3C7SLYBIA4U2QM2OP523IJH27JJWN573ZI3Z3AMXM" --method "withdraw(uint64,account)void" --fee 2000 --app-id 7 --from WOSFDOS3DRD7UAHBJH3LA2PTZKJMVHU2STVDUXNSCKMVRDGNZHTNIEHUJY
+  ```
+
+Where "withdraw(uint64, account)void" is the Withdrawal Method's Signature. This is used in constructing Atomic Transactions with ABI method calls in Algonaut's Rust Crate Implementation.
 
 
 # Box Escrow:
