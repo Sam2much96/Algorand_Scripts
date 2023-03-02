@@ -188,7 +188,9 @@ def call_app_method(client, private_key, index, fee, _method, arg1, arg2):
         sp = params,
         signer = signer,
         method_args = [arg1,arg2],
-        boxes = [[0, "BoxA"],[0, "BoxB"],[0, "BoxC"], [0,""],[0,""],[0,""]], #https://developer.algorand.org/docs/get-details/dapps/smart-contracts/apps/#smart-contract-arrays
+        
+        #Disabling boxes until implementation in Algonaut
+        #boxes = [[0, "BoxA"],[0, "BoxB"],[0, "BoxC"], [0,""],[0,""],[0,""]], #https://developer.algorand.org/docs/get-details/dapps/smart-contracts/apps/#smart-contract-arrays
 
         )
 
@@ -221,7 +223,9 @@ def update_app(algod_client, app_id, params,private_key,approval_program_compile
         index= app_id, 
         approval_program= approval_program_compiled, 
         clear_program= clear_state_program_compiled,
-        boxes=[[0, "BoxA"],[0, "BoxB"],[0, "BoxC"], [0,""],[0,""],[0,""]],
+        
+        #Disabling boxes until implementation in Algonaut
+        #boxes=[[0, "BoxA"],[0, "BoxB"],[0, "BoxC"], [0,""],[0,""],[0,""]],
         )
 
     # sign, send, await 
@@ -331,7 +335,9 @@ def delete_app(client, private_key, index):
         sender= sender, 
         sp= params, 
         index= index,
-        boxes=[[0, "BoxA"],[0, "BoxB"],[0, "BoxC"], [0,""],[0,""],[0,""]],
+        
+        #Disabling boxes until implementation in Algonaut
+        #boxes=[[0, "BoxA"],[0, "BoxB"],[0, "BoxC"], [0,""],[0,""],[0,""]],
         )
 
     # sign transaction
