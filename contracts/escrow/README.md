@@ -16,7 +16,7 @@
   $ Enter command  [deploy,pay,withdraw,deposit,mint,method_call,balance, delete ]
   ```
 
-** Run the Shell Command in Sandbox Environment**
+**Run the Shell Command in Sandbox Environment.**
 
   ```
   $ goal app method --arg "1" --arg "47K35YGGZQWMRL4QJ3C7SLYBIA4U2QM2OP523IJH27JJWN573ZI3Z3AMXM" --method "withdraw(uint64,account)void" --fee 2000 --app-id 7 --from WOSFDOS3DRD7UAHBJH3LA2PTZKJMVHU2STVDUXNSCKMVRDGNZHTNIEHUJY
